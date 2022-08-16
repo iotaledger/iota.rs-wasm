@@ -61,7 +61,7 @@ A bundler such as `webpack` or `rollup`(https://rollupjs.org/) is recommended to
 
 The library loads the compiled Wasm file with an HTTP GET request, so the `client_wasm_bg.wasm` file must be copied to the root of the dist folder.
 
-### Rollup
+#### Rollup
 
 - Install `rollup-plugin-copy`:
 
@@ -80,12 +80,12 @@ copy({
   targets: [{
     src: 'node_modules/@iota/client-wasm/web/wasm/client_wasm_bg.wasm',
     dest: 'public',
-    rename: 'client_wasm.wasm'
+    rename: 'client_wasm_bg.wasm'
   }]
 })
 ```
 
-### Webpack
+#### Webpack
 
 - Install `copy-webpack-plugin`:
 
@@ -102,7 +102,7 @@ new CopyWebPlugin({
   patterns: [
     {
       from: 'node_modules/@iota/client-wasm/web/wasm/client_wasm_bg.wasm',
-      to: 'client_wasm.wasm'
+      to: 'client_wasm_bg.wasm'
     }
   ]
 }),
