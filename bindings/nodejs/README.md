@@ -27,11 +27,11 @@ If there is no prebuilt binary available for your system you need `Rust` and `Ca
 After you linked the library, you can create a `Client` instance and interface with it.
 
 ```javascript
-const { ClientBuilder } = require('@iota/client')
+const { Client } = require('@iota/client')
 
-const client = new ClientBuilder()
-    .node('https://api.testnet.shimmer.network')
-    .build()
+const client = new Client({
+    nodes: ['https://api.testnet.shimmer.network'],
+});
 
 client.getInfo().then(console.log).catch(console.error)
 ```
