@@ -44,7 +44,7 @@ const entryFileTs = fs.readFileSync(entryFilePathTs).toString();
 // Replace the init function in the ts file.
 let changedFileTs = entryFileTs.replace(
     "/**\n* If `module_or_path` is {RequestInfo} or {URL}, makes a request and\n* for everything else, calls `WebAssembly.instantiate` directly.\n*\n* @param {InitInput | Promise<InitInput>} module_or_path\n*\n* @returns {Promise<InitOutput>}\n*/\nexport default function init (module_or_path?: InitInput | Promise<InitInput>): Promise<InitOutput>;",
-    "\/**\r\n* Loads the Wasm file so the lib can be used, relative path to Wasm file\r\n* @param {string | undefined} path\r\n*\/\r\nexport function init (path?: string): Promise<void>;"
+    "\/**\r\n* Loads the Wasm file so the lib can be used, relative path to Wasm file\r\n* @param {string | undefined} path\r\n*\/\r\nexport function init(path?: string): Promise<void>;"
 );
 fs.writeFileSync(
     entryFilePathTs,
@@ -57,3 +57,7 @@ const newPackage = generatePackage({
 });
 
 fs.writeFileSync(path.join(RELEASE_FOLDER + "../", 'package.json'), JSON.stringify(newPackage, null, 2));
+
+// Export the Wasm init() function from `index.ts.
+const indexFile = path.join(__dirname, "..", "out", "lib", "index.ts");
+fs.writeFileSync(indexFile, "// @ts-ignore\nexport { init } from '../wasm/client_wasm';", { flag: 'a' });

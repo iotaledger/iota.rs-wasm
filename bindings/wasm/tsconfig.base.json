@@ -1,9 +1,10 @@
 {
     "compilerOptions": {
-        "lib": ["es2019", "DOM"],
+        "lib": ["ES2020", "DOM"],
         "declaration": true,
         "sourceMap": true,
         "strict": true,
+        "moduleResolution": "node",
         "importsNotUsedAsValues": "error",
         "noImplicitAny": true,
         "preserveConstEnums": true,

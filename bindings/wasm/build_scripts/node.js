@@ -1,6 +1,6 @@
-const path = require('path')
-const fs = require('fs')
-const { lintAll } = require('./lints')
+const path = require('path');
+const fs = require('fs');
+const { lintAll } = require('./lints');
 const generatePackage = require('./utils/generatePackage');
 
 const rustPackageName = "client_wasm";
