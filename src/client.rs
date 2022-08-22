@@ -5,7 +5,6 @@
 
 use std::{
     collections::HashSet,
-    ops::Range,
     str::FromStr,
     sync::{Arc, RwLock},
     time::Duration,
@@ -224,12 +223,11 @@ impl Client {
             for (info, node_url) in nodes.iter() {
                 if let Ok(mut client_network_info) = network_info.write() {
                     client_network_info.network_id = hash_network(&info.protocol.network_name).ok();
-                    // todo update protocol version
                     client_network_info.min_pow_score = Some(info.protocol.min_pow_score);
                     client_network_info.bech32_hrp = Some(info.protocol.bech32_hrp.clone());
                     client_network_info.rent_structure = Some(info.protocol.rent_structure.clone());
                     if !client_network_info.local_pow {
-                        if info.features.contains(&"Pow".to_string()) {
+                        if info.features.contains(&"PoW".to_string()) {
                             synced_nodes.insert(node_url.clone());
                         }
                     } else {
@@ -417,7 +415,6 @@ impl Client {
     // Node core API
     //////////////////////////////////////////////////////////////////////
 
-    // todo: only used during syncing, can it be replaced with the other node info function?
     /// GET /api/core/v2/info endpoint
     pub async fn get_node_info(url: &str, auth: Option<NodeAuth>) -> Result<NodeInfo> {
         let mut url = crate::node_manager::builder::validate_url(Url::parse(url)?)?;
@@ -609,17 +606,6 @@ impl Client {
         Err(Error::TangleInclusionError(block_id.to_string()))
     }
 
-    /// Function to consolidate all funds from a range of addresses to the address with the lowest index in that range
-    /// Returns the address to which the funds got consolidated, if any were available
-    pub async fn consolidate_funds(
-        &self,
-        secret_manager: &SecretManager,
-        account_index: u32,
-        address_range: Range<u32>,
-    ) -> crate::Result<String> {
-        crate::api::consolidate_funds(self, secret_manager, account_index, address_range).await
-    }
-
     /// Function to find inputs from addresses for a provided amount (useful for offline signing), ignoring outputs with
     /// additional unlock conditions
     pub async fn find_inputs(&self, addresses: Vec<String>, amount: u64) -> Result<Vec<UtxoInput>> {
@@ -627,27 +613,26 @@ impl Client {
         let mut available_outputs = Vec::new();
 
         for address in addresses {
-            available_outputs.extend_from_slice(
-                &self
-                    .get_address()
-                    .outputs(vec![
-                        QueryParameter::Address(address.to_string()),
-                        QueryParameter::HasExpiration(false),
-                        QueryParameter::HasTimelock(false),
-                        QueryParameter::HasStorageDepositReturn(false),
-                    ])
-                    .await?,
-            );
+            let basic_output_ids = self
+                .basic_output_ids(vec![
+                    QueryParameter::Address(address.to_string()),
+                    QueryParameter::HasExpiration(false),
+                    QueryParameter::HasTimelock(false),
+                    QueryParameter::HasStorageDepositReturn(false),
+                ])
+                .await?;
+
+            available_outputs.extend(self.get_outputs(basic_output_ids).await?);
         }
 
         let mut basic_outputs = Vec::new();
-        let local_time = self.get_time_checked().await?;
+        let current_time = self.get_time_checked().await?;
 
         for output_resp in available_outputs {
             let (amount, _) = ClientBlockBuilder::get_output_amount_and_address(
                 &Output::try_from(&output_resp.output)?,
                 None,
-                local_time,
+                current_time,
             )?;
             basic_outputs.push((
                 UtxoInput::new(
@@ -688,25 +673,25 @@ impl Client {
     /// Find all outputs based on the requests criteria. This method will try to query multiple nodes if
     /// the request amount exceeds individual node limit.
     pub async fn find_outputs(&self, output_ids: &[OutputId], addresses: &[String]) -> Result<Vec<OutputResponse>> {
-        let mut output_metadata = self.get_outputs(output_ids.to_vec()).await?;
+        let mut output_responses = self.get_outputs(output_ids.to_vec()).await?;
 
         // Use `get_address()` API to get the address outputs first,
         // then collect the `UtxoInput` in the HashSet.
         for address in addresses {
             // Get output ids of outputs that can be controlled by this address without further unlock constraints
-            let address_outputs = self
-                .get_address()
-                .outputs(vec![
+            let basic_output_ids = self
+                .basic_output_ids(vec![
                     QueryParameter::Address(address.to_string()),
                     QueryParameter::HasExpiration(false),
                     QueryParameter::HasTimelock(false),
                     QueryParameter::HasStorageDepositReturn(false),
                 ])
                 .await?;
-            output_metadata.extend(address_outputs.into_iter());
+
+            output_responses.extend(self.get_outputs(basic_output_ids).await?);
         }
 
-        Ok(output_metadata.clone())
+        Ok(output_responses.clone())
     }
 
     /// Reattaches blocks for provided block id. Blocks can be reattached only if they are valid and haven't been
@@ -780,7 +765,7 @@ impl Client {
     /// Returns the local time checked with the timestamp of the latest milestone, if the difference is larger than 5
     /// minutes an error is returned to prevent locking outputs by accident for a wrong time.
     pub async fn get_time_checked(&self) -> Result<u32> {
-        let local_time = {
+        let current_time = {
             #[cfg(all(target_arch = "wasm32", not(target_os = "wasi")))]
             let now = instant::SystemTime::now().duration_since(instant::SystemTime::UNIX_EPOCH);
             #[cfg(not(all(target_arch = "wasm32", not(target_os = "wasi"))))]
@@ -793,14 +778,14 @@ impl Client {
         let latest_ms_timestamp = status_response.latest_milestone.timestamp;
         // Check the local time is in the range of +-5 minutes of the node to prevent locking funds by accident
         if !(latest_ms_timestamp - FIVE_MINUTES_IN_SECONDS..latest_ms_timestamp + FIVE_MINUTES_IN_SECONDS)
-            .contains(&local_time)
+            .contains(&current_time)
         {
             return Err(Error::TimeNotSynced {
-                local_time,
+                current_time,
                 milestone_timestamp: latest_ms_timestamp,
             });
         }
-        Ok(local_time)
+        Ok(current_time)
     }
 
     //////////////////////////////////////////////////////////////////////

@@ -42,7 +42,6 @@ pub enum Error {
     /// The wallet account doesn't have enough native tokens
     #[error("The wallet account doesn't have enough native tokens, missing: {0:?}")]
     NotEnoughNativeTokens(NativeTokens),
-    // todo get missing amount (storage deposit for an output with this amount of native tokens)
     /// The wallet account doesn't have enough balance for an output with the remaining native tokens.
     #[error("The wallet account doesn't have enough balance for an output with the remaining native tokens.")]
     NoBalanceForNativeTokenRemainder,
@@ -259,10 +258,12 @@ pub enum Error {
     #[error("the semantic validation of a transaction failed with conflict reason: {} - {0:?}", *.0 as u8)]
     TransactionSemantic(ConflictReason),
     /// Local time doesn't match the time of the latest milestone timestamp
-    #[error("Local time {local_time} doesn't match the time of the latest milestone timestamp: {milestone_timestamp}")]
+    #[error(
+        "Local time {current_time} doesn't match the time of the latest milestone timestamp: {milestone_timestamp}"
+    )]
     TimeNotSynced {
         /// The local time.
-        local_time: u32,
+        current_time: u32,
         /// The timestamp of the latest milestone.
         milestone_timestamp: u32,
     },
