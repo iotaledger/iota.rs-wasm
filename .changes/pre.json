@@ -9,10 +9,12 @@
     ".changes/ignore-tests.md",
     ".changes/ledger-nano-status.md",
     ".changes/ledger-nano-unlocks.md",
+    ".changes/native-token-remainder.md",
     ".changes/pow-hrp-renaming.md",
     ".changes/pre-release.md",
     ".changes/query-parameters-renaming.md",
     ".changes/tag-data-string.md",
+    ".changes/ts-dependency.md",
     ".changes/utxo chain inputs.md"
   ]
 }
