@@ -3,9 +3,6 @@ name: Wasm publish to NPM
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version to publish Wasm under (e.g. `1.2.3-dev.1`)'
-        required: true
       branch:
         description: 'Branch to run publish from'
         required: true
