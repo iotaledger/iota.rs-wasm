@@ -28,12 +28,16 @@ jobs:
           node-version: '16.x'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Install JS dependencies
-        run: npm ci
+      - name: Install Yarn
+        run: npm i -g yarn
         working-directory: bindings/wasm
 
       - name: Install JS dependencies
-        run: npm run build
+        run: yarn
+        working-directory: bindings/wasm
+
+      - name: Install JS dependencies
+        run: yarn build
         working-directory: bindings/wasm
 
       - name: Publish WASM bindings to NPM
