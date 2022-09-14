@@ -11,13 +11,20 @@ on:
         required: false
 
 jobs:
-  publish-rust:
+  publish-wasm:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
           ref: ${{ github.event.inputs.branch }}
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          target: 'wasm32-unknown-unknown'
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
@@ -33,7 +40,7 @@ jobs:
         run: yarn
         working-directory: bindings/wasm
 
-      - name: Install JS dependencies
+      - name: Build project
         run: yarn build
         working-directory: bindings/wasm
 
