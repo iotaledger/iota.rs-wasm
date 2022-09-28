@@ -210,7 +210,7 @@ pub enum Response {
     Faucet(String),
     /// Response for:
     /// - [`GetTokenSupply`](crate::message_interface::Message::GetTokenSupply)
-    TokenSupply(u64), 
+    TokenSupply(u64),
 
     /// Response for:
     /// - [`StoreMnemonic`](crate::message_interface::Message::StoreMnemonic)
@@ -219,6 +219,4 @@ pub enum Response {
     Error(Error),
     /// Response for any method that panics.
     Panic(String),
-
-
 }

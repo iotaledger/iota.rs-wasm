@@ -510,7 +510,6 @@ pub enum Message {
         /// The address for request funds
         address: String,
     },
-    /// Requests the token supply from the network the client is configured for. 
-    GetTokenSupply, 
-
+    /// Requests the token supply from the network the client is configured for.
+    GetTokenSupply,
 }
