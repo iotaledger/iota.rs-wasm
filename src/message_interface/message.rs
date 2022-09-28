@@ -512,4 +512,6 @@ pub enum Message {
     },
     /// Requests the token supply from the network the client is configured for.
     GetTokenSupply,
+    /// Requests the protocol parameters in the form of a JSON string,
+    GetProtocolParametersJSON,
 }

@@ -566,6 +566,9 @@ impl ClientMessageHandler {
             ))),
             Message::Faucet { url, address } => Ok(Response::Faucet(request_funds_from_faucet(&url, &address).await?)),
             Message::GetTokenSupply => Ok(Response::TokenSupply(self.client.get_token_supply()?)),
+            Message::GetProtocolParametersJSON => Ok(Response::ProtocolParametersJSON(serde_json::to_string(
+                &self.client.get_protocol_parameters()?,
+            )?)),
         }
     }
 }

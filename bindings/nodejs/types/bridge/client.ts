@@ -216,6 +216,10 @@ export interface __GetPeersMessage__ {
     name: 'getPeers';
 }
 
+export interface __GetProtocolParametersJSON__ {
+    name: 'getProtocolParametersJSON';
+}
+
 export interface __PostBlockRawMessage__ {
     name: 'postBlockRaw';
     data: {

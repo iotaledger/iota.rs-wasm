@@ -483,6 +483,14 @@ export class Client {
         return JSON.parse(response).payload;
     }
 
+
+    async getProtocolParametersJSON(): Promise<String>{
+        const response = await this.messageHandler.sendMessage({
+            name: 'getProtocolParametersJSON', 
+        });
+        return JSON.parse(response).payload
+    }
+
     /**
      * Post block as raw bytes, returns the block ID.
      */

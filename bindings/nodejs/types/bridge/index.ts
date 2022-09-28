@@ -66,6 +66,7 @@ import type {
     __BuildAliasOutputMessage__,
     __BuildFoundryOutputMessage__,
     __BuildNftOutputMessage__,
+    __GetProtocolParametersJSON__,
 } from './client';
 
 export type __ClientMessages__ =
@@ -101,6 +102,7 @@ export type __ClientMessages__ =
     | __GetHealthMessage__
     | __GetNodeInfoMessage__
     | __GetPeersMessage__
+    | __GetProtocolParametersJSON__
     | __PostBlockRawMessage__
     | __GetBlockRawMessage__
     | __GetMilestoneByIdMessage__
