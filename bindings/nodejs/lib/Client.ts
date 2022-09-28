@@ -598,6 +598,20 @@ export class Client {
     }
 
     /**
+     * Get the token supply from the network the client is configured for. 
+     */
+    async getTokenSupply(): Promise<BigInt> {
+        const response = await this.messageHandler.sendMessage(
+            {
+                name: 'getTokenSupply',
+            }
+        ); 
+
+        return JSON.parse(response).payload;
+    }
+
+
+    /**
      * Get the treasury output.
      */
     async getTreasury(): Promise<ITreasury> {

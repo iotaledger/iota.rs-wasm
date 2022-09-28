@@ -565,6 +565,7 @@ impl ClientMessageHandler {
                 token_scheme_kind,
             ))),
             Message::Faucet { url, address } => Ok(Response::Faucet(request_funds_from_faucet(&url, &address).await?)),
+            Message::GetTokenSupply => Ok(Response::TokenSupply(&self.client.get_token_supply()?)), 
         }
     }
 }
