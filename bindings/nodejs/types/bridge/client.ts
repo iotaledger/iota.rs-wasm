@@ -83,6 +83,10 @@ export interface __GetNetworkInfoMessage__ {
     name: 'getNetworkInfo';
 }
 
+export interface __GetTokenSupply__ {
+    name: 'getTokenSupply'
+}
+
 export interface __GetBlockMessage__ {
     name: 'getBlock';
     data: {

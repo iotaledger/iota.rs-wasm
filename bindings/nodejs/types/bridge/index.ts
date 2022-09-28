@@ -35,6 +35,7 @@ import type {
     __GetReceiptsMessage__,
     __GetReceiptsMigratedAtMessage__,
     __GetTreasuryMessage__,
+    __GetTokenSupply__,
     __GetIncludedBlockMessage__,
     __Bech32ToHexMessage__,
     __HexToBech32Message__,
@@ -109,6 +110,7 @@ export type __ClientMessages__ =
     | __GetReceiptsMessage__
     | __GetReceiptsMigratedAtMessage__
     | __GetTreasuryMessage__
+    | __GetTokenSupply__
     | __GetIncludedBlockMessage__
     | __Bech32ToHexMessage__
     | __HexToBech32Message__
