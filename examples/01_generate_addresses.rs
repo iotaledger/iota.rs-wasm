@@ -45,10 +45,10 @@ async fn main() -> Result<()> {
     println!("List of generated public addresses:\n{addresses:#?}\n");
 
     // Generating addresses with `client.get_addresses(&secret_manager)`, will by default get the bech32_hrp (Bech32
-    // human readable part) from the nodeinfo, generating it "offline" requires setting it with
+    // human readable part) from the node info, generating it "offline" requires setting it with
     // `with_bech32_hrp(bech32_hrp)`
     let addresses = GetAddressesBuilder::new(&secret_manager)
-        .with_bech32_hrp(client.get_bech32_hrp().await?)
+        .with_bech32_hrp(client.get_bech32_hrp()?)
         .with_account_index(0)
         .with_range(0..4)
         .finish()

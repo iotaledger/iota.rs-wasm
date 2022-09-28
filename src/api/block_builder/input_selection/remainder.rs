@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use bee_block::{
     address::Address,
     output::{
-        unlock_condition::{AddressUnlockCondition, UnlockCondition, UnlockConditions},
+        unlock_condition::{AddressUnlockCondition, UnlockCondition},
         BasicOutputBuilder, NativeTokensBuilder, Output, RentStructure,
     },
 };
@@ -31,6 +31,7 @@ pub(crate) fn get_storage_deposit_return_outputs<'a>(
     inputs: impl Iterator<Item = &'a InputSigningData> + Clone,
     outputs: impl Iterator<Item = &'a Output> + Clone,
     current_time: u32,
+    token_supply: u64,
 ) -> Result<Vec<Output>> {
     log::debug!("[get_storage_deposit_return_outputs]");
 
@@ -68,7 +69,7 @@ pub(crate) fn get_storage_deposit_return_outputs<'a>(
             new_sdr_outputs.push(
                 BasicOutputBuilder::new_with_amount(remaining_amount_to_add)?
                     .with_unlock_conditions([UnlockCondition::Address(AddressUnlockCondition::new(return_address))])
-                    .finish_output()?,
+                    .finish_output(token_supply)?,
             );
         }
     }
@@ -84,6 +85,8 @@ pub(crate) fn get_remainder_output<'a>(
     remainder_address: Option<Address>,
     rent_structure: &RentStructure,
     allow_burning: bool,
+    current_time: u32,
+    token_supply: u64,
 ) -> Result<Option<RemainderData>> {
     log::debug!("[get_remainder]");
     let input_outputs = inputs.clone().map(|i| &i.output);
@@ -116,7 +119,7 @@ pub(crate) fn get_remainder_output<'a>(
         let (remainder_addr, address_chain) = match remainder_address {
             // For provided remainder addresses we can't get the Chain
             Some(a) => (a, None),
-            None => get_remainder_address(inputs)?,
+            None => get_remainder_address(inputs, current_time)?,
         };
 
         let mut remainder_output_builder = BasicOutputBuilder::new_with_amount(remainder_amount)?
@@ -124,9 +127,9 @@ pub(crate) fn get_remainder_output<'a>(
         if let Some(remainder_native_tokens) = native_token_remainder {
             remainder_output_builder = remainder_output_builder.with_native_tokens(remainder_native_tokens);
         }
-        let remainder = remainder_output_builder.finish_output()?;
+        let remainder = remainder_output_builder.finish_output(token_supply)?;
         // Check if output has enough amount to cover the storage deposit
-        remainder.verify_storage_deposit(rent_structure)?;
+        remainder.verify_storage_deposit(rent_structure.clone(), token_supply)?;
         Some(RemainderData {
             output: remainder,
             chain: address_chain,
@@ -148,29 +151,29 @@ pub(crate) fn get_remainder_output<'a>(
 // We don't want to use nft or alias addresses as remainder address, because we might not be able to control them later
 pub(crate) fn get_remainder_address<'a>(
     inputs: impl Iterator<Item = &'a InputSigningData>,
+    current_time: u32,
 ) -> Result<(Address, Option<Chain>)> {
     for input in inputs {
-        // todo: check expiration with time, for now we just ignore outputs with an expiration unlock condition here
-        if input
-            .output
-            .unlock_conditions()
-            .and_then(UnlockConditions::expiration)
-            .is_some()
-        {
-            continue;
-        }
-        if let Some(address_unlock_condition) = input.output.unlock_conditions().and_then(UnlockConditions::address) {
-            if address_unlock_condition.address().is_ed25519() {
-                return Ok((*address_unlock_condition.address(), input.chain.clone()));
+        if let Some(unlock_conditions) = input.output.unlock_conditions() {
+            if let Some(address_expired) = unlock_conditions
+                .expiration()
+                .and_then(|e| e.return_address_expired(current_time))
+            {
+                if address_expired.is_ed25519() {
+                    return Ok((*address_expired, input.chain.clone()));
+                }
             }
-        }
-        if let Some(governor_address_unlock_condition) = input
-            .output
-            .unlock_conditions()
-            .and_then(UnlockConditions::governor_address)
-        {
-            if governor_address_unlock_condition.address().is_ed25519() {
-                return Ok((*governor_address_unlock_condition.address(), input.chain.clone()));
+
+            if let Some(address_unlock_condition) = unlock_conditions.address() {
+                if address_unlock_condition.address().is_ed25519() {
+                    return Ok((*address_unlock_condition.address(), input.chain.clone()));
+                }
+            }
+
+            if let Some(governor_address_unlock_condition) = unlock_conditions.governor_address() {
+                if governor_address_unlock_condition.address().is_ed25519() {
+                    return Ok((*governor_address_unlock_condition.address(), input.chain.clone()));
+                }
             }
         }
     }
@@ -179,6 +182,7 @@ pub(crate) fn get_remainder_address<'a>(
 }
 
 // Get additional required storage deposit amount for the remainder output
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn get_additional_required_remainder_amount(
     remainder_address: Option<Address>,
     selected_inputs: &[InputSigningData],
@@ -186,6 +190,8 @@ pub(crate) fn get_additional_required_remainder_amount(
     selected_input_native_tokens: &NativeTokensBuilder,
     required_accumulated_amounts: &AccumulatedOutputAmounts,
     rent_structure: &RentStructure,
+    current_time: u32,
+    token_supply: u64,
 ) -> crate::Result<u64> {
     let additional_required_remainder_amount = {
         if selected_input_amount > required_accumulated_amounts.amount {
@@ -199,9 +205,10 @@ pub(crate) fn get_additional_required_remainder_amount(
                 rent_structure,
                 &match remainder_address {
                     Some(a) => a,
-                    None => get_remainder_address(selected_inputs.iter())?.0,
+                    None => get_remainder_address(selected_inputs.iter(), current_time)?.0,
                 },
                 &native_token_remainder,
+                token_supply,
             )?;
             if required_deposit > current_remainder_amount {
                 required_deposit - current_remainder_amount
@@ -209,7 +216,25 @@ pub(crate) fn get_additional_required_remainder_amount(
                 0
             }
         } else {
-            0
+            // Not more amount than required, but maybe still native tokens left
+            let native_token_remainder = get_remainder_native_tokens(
+                selected_input_native_tokens,
+                &required_accumulated_amounts.native_tokens,
+            )?;
+
+            if let Some(native_token_remainder) = native_token_remainder {
+                minimum_storage_deposit_basic_output(
+                    rent_structure,
+                    &match remainder_address {
+                        Some(a) => a,
+                        None => get_remainder_address(selected_inputs.iter(), current_time)?.0,
+                    },
+                    &Some(native_token_remainder),
+                    token_supply,
+                )?
+            } else {
+                0
+            }
         }
     };
     Ok(additional_required_remainder_amount)

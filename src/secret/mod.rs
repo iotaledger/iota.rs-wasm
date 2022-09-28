@@ -15,9 +15,9 @@ pub mod stronghold;
 /// Signing related types
 pub mod types;
 
-use std::{collections::HashMap, ops::Range, str::FromStr};
 #[cfg(feature = "stronghold")]
-use std::{path::PathBuf, time::Duration};
+use std::time::Duration;
+use std::{collections::HashMap, ops::Range, str::FromStr};
 
 use async_trait::async_trait;
 use bee_block::{
@@ -98,7 +98,8 @@ pub enum SecretManager {
     #[cfg_attr(docsrs, doc(cfg(feature = "ledger_nano")))]
     LedgerNano(LedgerSecretManager),
 
-    /// Secret manager that uses only a mnemonic.
+    /// Secret manager that uses a mnemonic in plain memory. It's not recommended for production use. Use
+    /// LedgerNano or Stronghold instead.
     Mnemonic(MnemonicSecretManager),
 
     /// Secret manager that's just a placeholder, so it can be provided to an online wallet, but can't be used for
@@ -133,15 +134,20 @@ pub enum SecretManagerDto {
     /// Stronghold
     #[cfg(feature = "stronghold")]
     #[cfg_attr(docsrs, doc(cfg(feature = "stronghold")))]
+    #[serde(alias = "stronghold")]
     Stronghold(StrongholdDto),
     /// Ledger Device, bool specifies if it's a simulator or not
     #[cfg(feature = "ledger_nano")]
+    #[serde(alias = "ledgerNano")]
     LedgerNano(bool),
     /// Mnemonic
+    #[serde(alias = "mnemonic")]
     Mnemonic(String),
     /// Hex seed
+    #[serde(alias = "hexSeed")]
     HexSeed(String),
     /// Placeholder
+    #[serde(alias = "placeholder")]
     Placeholder,
 }
 
@@ -161,7 +167,7 @@ impl TryFrom<&SecretManagerDto> for SecretManager {
                     builder = builder.timeout(Duration::from_secs(*timeout));
                 }
 
-                Self::Stronghold(builder.try_build(PathBuf::from(&stronghold_dto.snapshot_path))?)
+                Self::Stronghold(builder.build(&stronghold_dto.snapshot_path)?)
             }
 
             #[cfg(feature = "ledger_nano")]

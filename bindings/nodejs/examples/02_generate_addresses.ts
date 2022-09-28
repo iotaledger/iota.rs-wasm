@@ -28,7 +28,7 @@ async function run() {
             throw new Error('.env mnemonic is undefined, see .env.example');
         }
         const secretManager = {
-            Mnemonic: process.env.NON_SECURE_USE_OF_DEVELOPMENT_MNEMONIC_1,
+            mnemonic: process.env.NON_SECURE_USE_OF_DEVELOPMENT_MNEMONIC_1,
         };
 
         // Generate public address with custom account index and range.
@@ -64,7 +64,7 @@ async function run() {
                 },
                 internal: false,
                 // Generating addresses with client.generateAddresses(secretManager, {}), will by default get the bech32_hrp (Bech32
-                // human readable part) from the nodeinfo, generating it "offline" requires setting it in the generateAddressesOptions
+                // human readable part) from the node info, generating it "offline" requires setting it in the generateAddressesOptions
                 bech32Hrp: SHIMMER_TESTNET_BECH32_HRP,
             },
         );

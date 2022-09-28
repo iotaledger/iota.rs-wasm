@@ -41,7 +41,6 @@ macro_rules! lazy_static {
 }
 
 pub mod api;
-pub mod builder;
 pub mod client;
 pub mod constants;
 pub mod db;
@@ -64,7 +63,7 @@ pub use url::Url;
 
 #[cfg(feature = "mqtt")]
 pub use self::node_api::mqtt::*;
-pub use self::{builder::ClientBuilder, client::*, error::*, utils::*};
+pub use self::{client::*, error::*, node_api::core::routes::NodeInfoWrapper, utils::*};
 
 #[cfg(feature = "mqtt")]
 mod async_runtime {
@@ -76,8 +75,8 @@ mod async_runtime {
     static RUNTIME: OnceCell<Mutex<Runtime>> = OnceCell::new();
 
     pub(crate) fn block_on<C: futures::Future>(cb: C) -> C::Output {
-        let runtime = RUNTIME.get_or_init(|| Mutex::new(Runtime::new().expect("Failed to create Tokio runtim")));
-        runtime.lock().expect("Failed to lock the runtime.").block_on(cb)
+        let runtime = RUNTIME.get_or_init(|| Mutex::new(Runtime::new().expect("failed to create Tokio runtime")));
+        runtime.lock().expect("failed to lock the runtime.").block_on(cb)
     }
 
     pub(crate) fn spawn<F>(future: F)
@@ -85,7 +84,7 @@ mod async_runtime {
         F: futures::Future + Send + 'static,
         F::Output: Send + 'static,
     {
-        let runtime = RUNTIME.get_or_init(|| Mutex::new(Runtime::new().expect("Failed to create Tokio runtim")));
-        runtime.lock().expect("Failed to lock the runtime.").spawn(future);
+        let runtime = RUNTIME.get_or_init(|| Mutex::new(Runtime::new().expect("failed to create Tokio runtime")));
+        runtime.lock().expect("failed to lock the runtime.").spawn(future);
     }
 }

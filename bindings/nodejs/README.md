@@ -21,19 +21,30 @@ $ yarn add @iota/client
 One of the following Node.js version: '14.x', '16.x', '18.x'
 
 If there is no prebuilt binary available for your system you need `Rust` and `Cargo`, to build it yourself. Install them [here](https://doc.rust-lang.org/cargo/getting-started/installation.html).
+Also for Linux `libudev` is needed and can be installed with `apt install libudev-dev`.
 
 ## Getting Started
 
 After you linked the library, you can create a `Client` instance and interface with it.
 
 ```javascript
-const { Client } = require('@iota/client')
+const { Client, initLogger } = require('@iota/client');
 
-const client = new Client({
-    nodes: ['https://api.testnet.shimmer.network'],
-});
+async function run() {
+    initLogger();
 
-client.getInfo().then(console.log).catch(console.error)
+    const client = new Client({
+        nodes: ['https://api.testnet.shimmer.network'],
+        localPow: true,
+    });
+
+    try {
+        const nodeInfo = await client.getInfo();
+        console.log('Node info: ', nodeInfo);
+    } catch (error) {
+        console.error('Error: ', error);
+    }
+}
+
+run().then(() => process.exit());
 ```
-
-Connecting to a MQTT broker using raw ip doesn't work with TCP. This is a limitation of rustls.

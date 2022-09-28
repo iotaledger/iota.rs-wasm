@@ -65,7 +65,7 @@ impl SecretManage for StrongholdAdapter {
             let public_key = self.ed25519_public_key(derive_location.clone()).await?;
 
             // Hash the public key to get the address.
-            let hash = Blake2b256::digest(&public_key);
+            let hash = Blake2b256::digest(public_key);
 
             // Convert the hash into [Address].
             let address = Address::Ed25519(Ed25519Address::new(hash.into()));
@@ -226,26 +226,26 @@ impl StrongholdAdapter {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use std::path::Path;
 
     use super::*;
     use crate::constants::IOTA_COIN_TYPE;
 
     #[tokio::test]
     async fn test_address_generation() {
-        let stronghold_path = PathBuf::from("test_address_generation.stronghold");
+        let stronghold_path = "test_address_generation.stronghold";
         let mnemonic = String::from(
             "giant dynamic museum toddler six deny defense ostrich bomb access mercy blood explain muscle shoot shallow glad autumn author calm heavy hawk abuse rally",
         );
         let mut stronghold_adapter = StrongholdAdapter::builder()
             .password("drowssap")
-            .try_build(stronghold_path.clone())
+            .build(stronghold_path)
             .unwrap();
 
         stronghold_adapter.store_mnemonic(mnemonic).await.unwrap();
 
         // The snapshot should have been on the disk now.
-        assert!(stronghold_path.exists());
+        assert!(Path::new(stronghold_path).exists());
 
         let addresses = stronghold_adapter
             .generate_addresses(
@@ -269,19 +269,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_key_cleared() {
-        let stronghold_path = PathBuf::from("test_key_cleared.stronghold");
+        let stronghold_path = "test_key_cleared.stronghold";
         let mnemonic = String::from(
             "giant dynamic museum toddler six deny defense ostrich bomb access mercy blood explain muscle shoot shallow glad autumn author calm heavy hawk abuse rally",
         );
         let mut stronghold_adapter = StrongholdAdapter::builder()
             .password("drowssap")
-            .try_build(stronghold_path.clone())
+            .build(stronghold_path)
             .unwrap();
 
         stronghold_adapter.store_mnemonic(mnemonic).await.unwrap();
 
         // The snapshot should have been on the disk now.
-        assert!(stronghold_path.exists());
+        assert!(Path::new(stronghold_path).exists());
 
         stronghold_adapter.clear_key().await;
 

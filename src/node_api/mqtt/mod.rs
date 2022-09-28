@@ -4,7 +4,10 @@
 //! IOTA node MQTT API
 pub mod types;
 
-use std::{sync::Arc, time::Instant};
+use std::{
+    sync::{Arc, RwLock as StdRwLock},
+    time::Instant,
+};
 
 use bee_block::{
     payload::{milestone::ReceiptMilestoneOption, MilestonePayload},
@@ -17,10 +20,43 @@ use rumqttc::{
     AsyncClient as MqttClient, Event, EventLoop, Incoming, MqttOptions, QoS, Request, Subscribe, SubscribeFilter,
     Transport,
 };
-use tokio::sync::{watch::Sender, RwLock};
+use tokio::sync::{
+    watch::{Receiver as WatchReceiver, Sender},
+    RwLock,
+};
 
 pub use self::types::*;
-use crate::{Client, Result};
+use crate::{Client, NetworkInfo, Result};
+
+impl Client {
+    /// Returns a handle to the MQTT topics manager.
+    #[cfg(feature = "mqtt")]
+    pub fn subscriber(&mut self) -> MqttManager<'_> {
+        MqttManager::new(self)
+    }
+
+    /// Subscribe to MQTT events with a callback.
+    #[cfg(feature = "mqtt")]
+    pub async fn subscribe<C: Fn(&TopicEvent) + Send + Sync + 'static>(
+        &mut self,
+        topics: Vec<Topic>,
+        callback: C,
+    ) -> crate::Result<()> {
+        MqttManager::new(self).with_topics(topics).subscribe(callback).await
+    }
+
+    /// Unsubscribe from MQTT events.
+    #[cfg(feature = "mqtt")]
+    pub async fn unsubscribe(&mut self, topics: Vec<Topic>) -> crate::Result<()> {
+        MqttManager::new(self).with_topics(topics).unsubscribe().await
+    }
+
+    /// Returns the mqtt event receiver.
+    #[cfg(feature = "mqtt")]
+    pub fn mqtt_event_receiver(&self) -> WatchReceiver<MqttEvent> {
+        self.mqtt_event_channel.1.clone()
+    }
+}
 
 async fn get_mqtt_client(client: &mut Client) -> Result<&mut MqttClient> {
     // if the client was disconnected, we clear it so we can start over
@@ -35,9 +71,9 @@ async fn get_mqtt_client(client: &mut Client) -> Result<&mut MqttClient> {
                 {
                     client
                         .node_manager
-                        .synced_nodes
+                        .healthy_nodes
                         .read()
-                        .map_or(client.node_manager.nodes.clone(), |synced_nodes| synced_nodes.clone())
+                        .map_or(client.node_manager.nodes.clone(), |healthy_nodes| healthy_nodes.clone())
                 }
                 #[cfg(target_family = "wasm")]
                 {
@@ -47,7 +83,7 @@ async fn get_mqtt_client(client: &mut Client) -> Result<&mut MqttClient> {
                 client.node_manager.nodes.clone()
             };
             for node in &nodes {
-                let host = node.url.host_str().expect("Can't get host from URL");
+                let host = node.url.host_str().expect("can't get host from URL");
                 let mut entropy = [0u8; 8];
                 utils::rand::fill(&mut entropy)?;
                 let id = format!("iotars{}", prefix_hex::encode(entropy));
@@ -88,6 +124,7 @@ async fn get_mqtt_client(client: &mut Client) -> Result<&mut MqttClient> {
                         client.broker_options.clone(),
                         client.mqtt_event_channel.0.clone(),
                         connection,
+                        client.network_info.clone(),
                     );
                 }
             }
@@ -101,25 +138,28 @@ fn poll_mqtt(
     options: BrokerOptions,
     event_sender: Arc<Sender<MqttEvent>>,
     mut event_loop: EventLoop,
+    network_info: Arc<StdRwLock<NetworkInfo>>,
 ) {
     std::thread::spawn(move || {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
-            .expect("Failed to create Tokio runtime");
+            .expect("failed to create Tokio runtime");
         runtime.block_on(async move {
             // rumqttc performs automatic reconnection since we keep running the event loop
             // but the subscriptions are lost on reconnection, so we need to resubscribe
             // the `is_subscribed` flag is set to false on event error, so the ConnAck event
-            // can perform the resubscriptions and reset `is_subscribed` to true.
+            // can perform the re-subscriptions and reset `is_subscribed` to true.
             // we need the flag since the first ConnAck must be ignored.
             let mut is_subscribed = true;
             let mut error_instant = Instant::now();
             let mut connection_failure_count = 0;
             let handle = event_loop.handle();
+
             loop {
                 let event = event_loop.poll().await;
                 let mqtt_topic_handlers_guard = mqtt_topic_handlers_guard.clone();
+
                 match event {
                     Ok(Event::Incoming(Incoming::ConnAck(_))) => {
                         let _ = event_sender.send(MqttEvent::Connected);
@@ -138,13 +178,18 @@ fn poll_mqtt(
                     }
                     Ok(Event::Incoming(Incoming::Publish(p))) => {
                         let topic = p.topic.clone();
+                        let network_info = network_info.clone();
+
                         crate::async_runtime::spawn(async move {
                             let mqtt_topic_handlers = mqtt_topic_handlers_guard.read().await;
+
                             if let Some(handlers) = mqtt_topic_handlers.get(&Topic::new_unchecked(topic.clone())) {
                                 let event = {
                                     if topic.contains("blocks") || topic.contains("included-block") {
-                                        let mut payload = &*p.payload;
-                                        match Block::unpack_verified(&mut payload) {
+                                        let payload = &*p.payload;
+                                        let protocol_parameters = &network_info.read().unwrap().protocol_parameters;
+
+                                        match Block::unpack_verified(payload, protocol_parameters) {
                                             Ok(block) => Ok(TopicEvent {
                                                 topic,
                                                 payload: MqttPayload::Block(block),
@@ -155,8 +200,10 @@ fn poll_mqtt(
                                             }
                                         }
                                     } else if topic.contains("milestones") {
-                                        let mut payload = &*p.payload;
-                                        match MilestonePayload::unpack_verified(&mut payload) {
+                                        let payload = &*p.payload;
+                                        let protocol_parameters = &network_info.read().unwrap().protocol_parameters;
+
+                                        match MilestonePayload::unpack_verified(payload, protocol_parameters) {
                                             Ok(milestone_payload) => Ok(TopicEvent {
                                                 topic,
                                                 payload: MqttPayload::MilestonePayload(milestone_payload),
@@ -167,8 +214,10 @@ fn poll_mqtt(
                                             }
                                         }
                                     } else if topic.contains("receipts") {
-                                        let mut payload = &*p.payload;
-                                        match ReceiptMilestoneOption::unpack_verified(&mut payload) {
+                                        let payload = &*p.payload;
+                                        let protocol_parameters = &network_info.read().unwrap().protocol_parameters;
+
+                                        match ReceiptMilestoneOption::unpack_verified(payload, protocol_parameters) {
                                             Ok(receipt) => Ok(TopicEvent {
                                                 topic,
                                                 payload: MqttPayload::Receipt(receipt),

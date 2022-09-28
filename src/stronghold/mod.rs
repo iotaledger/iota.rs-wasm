@@ -121,7 +121,7 @@ fn check_or_create_snapshot(
             stronghold.load_client_from_snapshot(PRIVATE_DATA_CLIENT_PATH, key_provider, snapshot_path)?;
         }
         Err(iota_stronghold::ClientError::Inner(ref err_msg)) => {
-            // Matching the error string is not ideal but stronhold doesn't wrap the error types at the moment.
+            // Matching the error string is not ideal but stronghold doesn't wrap the error types at the moment.
             if err_msg.to_string().contains("XCHACHA20-POLY1305") {
                 return Err(Error::StrongholdInvalidPassword);
             }
@@ -158,7 +158,7 @@ impl StrongholdAdapterBuilder {
     ///
     /// [`password()`]: Self::password()
     /// [`timeout()`]: Self::timeout()
-    pub fn try_build(mut self, snapshot_path: PathBuf) -> Result<StrongholdAdapter> {
+    pub fn build<P: AsRef<Path>>(mut self, snapshot_path: P) -> Result<StrongholdAdapter> {
         // In any case, Stronghold - as a necessary component - needs to be present at this point.
         let stronghold = if let Some(stronghold) = self.stronghold {
             stronghold
@@ -206,7 +206,7 @@ impl StrongholdAdapterBuilder {
             key_provider,
             timeout: self.timeout.unwrap_or(None),
             timeout_task: self.timeout_task.unwrap_or_else(|| Arc::new(Mutex::new(None))),
-            snapshot_path,
+            snapshot_path: snapshot_path.as_ref().to_path_buf(),
         })
     }
 }
@@ -274,12 +274,12 @@ impl StrongholdAdapter {
     /// If a snapshot path has been set, then it'll be rewritten with the newly set password.
     ///
     /// The secrets (e.g. mnemonic) stored in the Stronghold vault will be preserved, but the data saved via the
-    /// [`DatabaseProvier`] interface won't - they'll stay encrypted with the old password. To re-encrypt these
+    /// [`DatabaseProvider`] interface won't - they'll stay encrypted with the old password. To re-encrypt these
     /// data, provide a list of keys in `keys_to_re_encrypt`, as we have no way to list and iterate over every
     /// key-value in the Stronghold store - we'll attempt on the ones provided instead. Set it to `None` to skip
     /// re-encryption.
     pub async fn change_password(&mut self, new_password: &str) -> Result<()> {
-        // Stop the key clearing task to prevent the key from being abrubtly cleared (largely).
+        // Stop the key clearing task to prevent the key from being abruptly cleared (largely).
         if let Some(timeout_task) = self.timeout_task.lock().await.take() {
             timeout_task.abort();
         }
@@ -537,7 +537,7 @@ async fn task_key_clear(
 
 #[cfg(test)]
 mod tests {
-    use std::{fs, path::PathBuf};
+    use std::fs;
 
     use super::*;
 
@@ -545,12 +545,11 @@ mod tests {
     async fn test_clear_key() {
         let timeout = Duration::from_millis(100);
 
-        let snapshot_path = "test_clear_key.stronghold";
-        let stronghold_path = PathBuf::from(snapshot_path);
+        let stronghold_path = "test_clear_key.stronghold";
         let mut adapter = StrongholdAdapter::builder()
             .password("drowssap")
             .timeout(timeout)
-            .try_build(stronghold_path)
+            .build(stronghold_path)
             .unwrap();
 
         // There is a small delay between `build()` and the key clearing task being actually spawned and kept.
@@ -584,16 +583,15 @@ mod tests {
         assert_eq!(adapter.get_timeout(), timeout);
         assert!(matches!(*adapter.timeout_task.lock().await, None));
 
-        fs::remove_file(snapshot_path).unwrap();
+        fs::remove_file(stronghold_path).unwrap();
     }
 
     #[tokio::test]
     async fn stronghold_password_already_set() {
-        let snapshot_path = "stronghold_password_already_set.stronghold";
-        let stronghold_path = PathBuf::from(snapshot_path);
+        let stronghold_path = "stronghold_password_already_set.stronghold";
         let mut adapter = StrongholdAdapter::builder()
             .password("drowssap")
-            .try_build(stronghold_path)
+            .build(stronghold_path)
             .unwrap();
 
         adapter.clear_key().await;
@@ -604,6 +602,6 @@ mod tests {
         // When the password already exists, but a wrong one is provided, it should return an error
         assert!(adapter.set_password("other_password").await.is_err());
 
-        fs::remove_file(snapshot_path).unwrap();
+        fs::remove_file(stronghold_path).unwrap();
     }
 }

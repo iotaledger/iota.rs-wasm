@@ -77,7 +77,7 @@ impl SecretManage for LedgerSecretManager {
 
         let bip32 = LedgerBIP32Index {
             bip32_index: address_indexes.start | HARDENED,
-            bip32_change: if internal { 1 } else { 0 } | HARDENED,
+            bip32_change: u32::from(internal) | HARDENED,
         };
         // get ledger
         let ledger = get_ledger(coin_type, bip32_account, self.is_simulator)?;
@@ -292,10 +292,16 @@ impl SecretManageExt for LedgerSecretManager {
         // unpack signature to unlocks
         let mut unlocks = Vec::new();
         for _ in 0..input_len {
-            let unlock = Unlock::unpack::<_, true>(&mut unpacker).map_err(|_| crate::Error::PackableError)?;
+            let unlock = Unlock::unpack::<_, true>(&mut unpacker, &())?;
             // The ledger nano can return the same SignatureUnlocks multiple times, so only insert it once
-            if !unlocks.contains(&unlock) {
-                unlocks.push(unlock);
+            match unlock {
+                Unlock::Signature(_) => {
+                    if !unlocks.contains(&unlock) {
+                        unlocks.push(unlock);
+                    }
+                }
+                // Multiple reference unlocks with the same index are allowed
+                _ => unlocks.push(unlock),
             }
         }
 

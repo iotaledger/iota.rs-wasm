@@ -19,14 +19,13 @@ public class ClientConfig {
     private String network;
     private String networkId;
     private String bech32Hrp;
-    private Double minPowScore;
+    private Integer minPowScore;
     private Boolean localPow;
     private Boolean fallbackToLocalPow;
     private Integer tipsInterval;
     private RentStructure rentStructure;
     private ApiTimeout apiTimeout;
     private RemotePowTimeout remotePowTimeout;
-    private Boolean offline;
     private Integer powWorkerCount;
 
     public String getPrimaryNode() {
@@ -137,11 +136,11 @@ public class ClientConfig {
         return this;
     }
 
-    public double getMinPowScore() {
+    public int getMinPowScore() {
         return minPowScore;
     }
 
-    public ClientConfig withMinPowScore(double minPowScore) {
+    public ClientConfig withMinPowScore(int minPowScore) {
         this.minPowScore = minPowScore;
         return this;
     }
@@ -172,16 +171,6 @@ public class ClientConfig {
         this.tipsInterval = tipsInterval;
         return this;
     }
-
-    public boolean isOffline() {
-        return offline;
-    }
-
-    public ClientConfig withOffline(boolean offline) {
-        this.offline = offline;
-        return this;
-    }
-
 
     public RentStructure getRentStructure() {
         return rentStructure;
@@ -325,8 +314,6 @@ public class ClientConfig {
             o.add("rentStructure", rentStructure.getJson());
         if (apiTimeout != null)
             o.add("apiTimeout", apiTimeout.getJson());
-        if (offline != null)
-            o.addProperty("offline", offline);
         if (powWorkerCount != null)
             o.addProperty("powWorkerCount", powWorkerCount);
 

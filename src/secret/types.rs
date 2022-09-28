@@ -76,10 +76,13 @@ impl LedgerApp {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum LedgerDeviceType {
     /// Device Type Nano S
+    #[serde(alias = "ledgerNanoS")]
     LedgerNanoS,
     /// Device Type Nano X
+    #[serde(alias = "ledgerNanoX")]
     LedgerNanoX,
     /// Device Type Nano S Plus
+    #[serde(alias = "ledgerNanoSPlus")]
     LedgerNanoSPlus,
 }
 
@@ -229,18 +232,17 @@ pub struct InputSigningDataDto {
     pub bech32_address: String,
 }
 
-impl TryFrom<&InputSigningDataDto> for InputSigningData {
-    type Error = Error;
-
-    fn try_from(input: &InputSigningDataDto) -> Result<Self> {
+impl InputSigningData {
+    pub(crate) fn try_from_dto(input: &InputSigningDataDto, token_supply: u64) -> Result<InputSigningData> {
         Ok(Self {
-            output: Output::try_from(&input.output)?,
+            output: Output::try_from_dto(&input.output, token_supply)?,
             output_metadata: input.output_metadata.clone(),
             chain: input.chain.clone(),
             bech32_address: input.bech32_address.clone(),
         })
     }
 }
+
 impl From<&InputSigningData> for InputSigningDataDto {
     fn from(input: &InputSigningData) -> Self {
         Self {

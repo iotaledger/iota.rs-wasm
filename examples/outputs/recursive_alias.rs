@@ -48,12 +48,13 @@ async fn main() -> Result<()> {
     let address = client.get_addresses(&secret_manager).with_range(0..1).get_raw().await?[0];
     println!(
         "{}",
-        request_funds_from_faucet(&faucet_url, &address.to_bech32(client.get_bech32_hrp().await?)).await?
+        request_funds_from_faucet(&faucet_url, &address.to_bech32(client.get_bech32_hrp()?)).await?
     );
     // Wait some time for the faucet transaction
     tokio::time::sleep(std::time::Duration::from_secs(15)).await;
 
-    let rent_structure = client.get_rent_structure().await?;
+    let rent_structure = client.get_rent_structure()?;
+    let token_supply = client.get_token_supply()?;
 
     //////////////////////////////////
     // create three new alias outputs
@@ -70,7 +71,7 @@ async fn main() -> Result<()> {
                 address,
             )));
 
-    let outputs = vec![alias_output_builder.clone().finish_output()?; 3];
+    let outputs = vec![alias_output_builder.clone().finish_output(token_supply)?; 3];
 
     let block_1 = client
         .block()
@@ -98,7 +99,7 @@ async fn main() -> Result<()> {
     let alias_1_address = Address::Alias(AliasAddress::new(alias_id_1));
 
     let outputs = vec![
-        // make second alias output be contolled by the first one
+        // make second alias output be controlled by the first one
         alias_output_builder
             .clone()
             .with_alias_id(alias_id_1)
@@ -111,7 +112,7 @@ async fn main() -> Result<()> {
             .replace_unlock_condition(UnlockCondition::GovernorAddress(GovernorAddressUnlockCondition::new(
                 alias_0_address,
             )))?
-            .finish_output()?,
+            .finish_output(token_supply)?,
         // make third alias output be controlled by the second one (indirectly also by the first one)
         alias_output_builder
             .clone()
@@ -123,7 +124,7 @@ async fn main() -> Result<()> {
             .replace_unlock_condition(UnlockCondition::GovernorAddress(GovernorAddressUnlockCondition::new(
                 alias_1_address,
             )))?
-            .finish_output()?,
+            .finish_output(token_supply)?,
     ];
 
     let block_2 = client
@@ -133,7 +134,7 @@ async fn main() -> Result<()> {
         .finish()
         .await?;
     println!(
-        "Transaction with alias id set and ownserhip assigned to the first alias sent: {node_url}/api/core/v2/blocks/{}",
+        "Transaction with alias id set and ownership assigned to the first alias sent: {node_url}/api/core/v2/blocks/{}",
         block_2.id()
     );
     let _ = client.retry_until_included(&block_2.id(), None, None).await?;
@@ -153,7 +154,7 @@ async fn main() -> Result<()> {
             .replace_unlock_condition(UnlockCondition::GovernorAddress(GovernorAddressUnlockCondition::new(
                 alias_1_address,
             )))?
-            .finish_output()?,
+            .finish_output(token_supply)?,
     ];
 
     let block_3 = client
@@ -182,7 +183,7 @@ async fn main() -> Result<()> {
             .replace_unlock_condition(UnlockCondition::GovernorAddress(GovernorAddressUnlockCondition::new(
                 alias_1_address,
             )))?
-            .finish_output()?,
+            .finish_output(token_supply)?,
     ];
 
     let block_3 = client
