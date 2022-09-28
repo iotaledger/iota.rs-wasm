@@ -2,29 +2,21 @@ import { Client } from '../../lib';
 import '../customMatchers';
 import 'dotenv/config';
 
-const offlineClient = new Client({
-    offline: true,
-    nodes: [
-        {
-            url: 'http://localhost:14265',
-        },
-    ],
-    localPow: true,
-});
+const offlineClient = new Client({});
 
 describe('Client utility methods', () => {
     // Requires "stronghold" in cargo toml iota-client features
     it.skip('generates and stores mnemonic', async () => {
         const mnemonic = await offlineClient.generateMnemonic();
 
-        const StrongholdSecretManager = {
-            Stronghold: {
+        const strongholdSecretManager = {
+            stronghold: {
                 password: 'some_hopefully_secure_password',
                 snapshotPath: './stronghold',
             },
         };
         await expect(
-            offlineClient.storeMnemonic(StrongholdSecretManager, mnemonic),
+            offlineClient.storeMnemonic(strongholdSecretManager, mnemonic),
         ).resolves.toBe(null);
     });
 

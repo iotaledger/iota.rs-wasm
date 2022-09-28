@@ -19,11 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security -->
 
-## 2.0.0-beta.4 - 2022-XX-XX
+## 2.0.0 - 2022-09-28
+
+### Fixed
+
+- Check correct alias and nft addresses of new outputs in input selection;
+
+## 2.0.0 - 2022-09-27
 
 ### Added
 
 - `finish_pow` function to avoid the caller having to check for wasm family;
+- Debug logs for GET requests;
+- Added `#[serde(rename_all = "camelCase")]` to enums and aliases for `SecretManagerDto` and `LedgerDeviceType` fields;
 
 ### Changed
 
@@ -31,12 +39,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PoW node feature from `PoW` to `pow` to match TIP25;
 - Made `finish_multi_threaded_pow` and `finish_single_threaded_pow` private;
 - Cleaned up error enum;
+- Replaced `force_use_all_inputs` in `try_select_inputs()` with `mandatory_inputs`;
+- Rename `inputs` parameter in `try_select_inputs()` to `additional_inputs`;
+- Adapt the whole codebase to bee's packable visitor changes;
+- Made a lot of functions/methods async;
+- Renamed `synced_nodes` to `healthy_nodes`;
+- Renamed `unsynced_nodes()` to `unhealthy_nodes()`;
+- `UrlAuthError(String)` to `UrlAuthError(&'static str)`;
+
+### Removed
+
+- `GetAddressBuilder` and `AddressBalance`;
+- `offline` field in `ClientBuilder`;
 
 ### Fixed
 
 - Check expiration for remainder address;
 - Input selection when only native tokens are remaining;
 - Fix cpufeatures advisory;
+- Input selection for sender and issuer features features;
 
 ## 2.0.0-beta.3 - 2022-08-30
 

@@ -25,11 +25,11 @@ use serde::Serialize;
 
 #[cfg(feature = "ledger_nano")]
 use crate::secret::LedgerNanoStatus;
-use crate::{api::PreparedTransactionDataDto, builder::NetworkInfo, node_manager::node::Node, Error, NodeInfoWrapper};
+use crate::{api::PreparedTransactionDataDto, node_manager::node::Node, Error, NetworkInfo, NodeInfoWrapper};
 
 /// The response message.
 #[derive(Serialize, Debug)]
-#[serde(tag = "type", content = "payload")]
+#[serde(tag = "type", content = "payload", rename_all = "camelCase")]
 pub enum Response {
     /// Response for:
     /// - [`BuildAliasOutput`](crate::message_interface::Message::BuildAliasOutput)
@@ -75,9 +75,9 @@ pub enum Response {
     /// - [`SignTransaction`](crate::message_interface::Message::SignTransaction)
     SignedTransaction(PayloadDto),
     /// Response for:
-    /// - [`UnsyncedNodes`](crate::message_interface::Message::UnsyncedNodes)
+    /// - [`UnhealthyNodes`](crate::message_interface::Message::UnhealthyNodes)
     #[cfg(not(target_family = "wasm"))]
-    UnsyncedNodes(HashSet<Node>),
+    UnhealthyNodes(HashSet<Node>),
     /// Response for:
     /// - [`GetHealth`](crate::message_interface::Message::GetHealth)
     Health(bool),
