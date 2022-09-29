@@ -43,7 +43,11 @@ pub(crate) type NetworkInfoGuard = wasm_network_info_guard::WasmNetworkInfoGuard
 
 #[cfg(target_family = "wasm")]
 mod wasm_network_info_guard {
-    use std::{cell::Cell, rc::Rc};
+    use std::{
+        borrow::{Borrow, BorrowMut},
+        cell::{Cell, RefCell},
+        rc::Rc,
+    };
 
     use bee_api_types::responses::InfoResponse;
     use bee_block::protocol::ProtocolParameters;
@@ -51,7 +55,7 @@ mod wasm_network_info_guard {
     use crate::{Client, Error, NetworkInfo};
     #[derive(Clone)]
     pub(crate) struct WasmNetworkInfoGuard {
-        pub(super) network_info: Rc<Cell<NetworkInfo>>,
+        pub(super) network_info: Rc<RefCell<NetworkInfo>>,
         // The unix timestamp in ms when the NetworkInfo was last observed to be successfully retrieved from the node.
         pub(super) refreshed: Rc<Cell<f64>>,
         pub(super) update_error: Rc<Cell<Option<Error>>>,
@@ -60,16 +64,15 @@ mod wasm_network_info_guard {
     impl WasmNetworkInfoGuard {
         pub(crate) fn new(network_info: NetworkInfo) -> Self {
             Self {
-                network_info: Rc::new(Cell::new(network_info)),
+                network_info: Rc::new(RefCell::new(network_info)),
                 refreshed: Rc::new(Cell::new(instant::now())),
                 update_error: Rc::new(Cell::new(None)),
             }
         }
 
         pub(crate) fn modify<T>(&self, f: impl FnOnce(&mut NetworkInfo) -> T) -> Result<T, Error> {
-            let mut current = self.network_info.take();
-            let output = f(&mut current);
-            self.network_info.set(current);
+            let mut current = self.network_info.try_borrow_mut().map_err(|_| Error::PoisonError)?;
+            let output = f(current.borrow_mut());
             Ok(output)
         }
 
@@ -82,11 +85,13 @@ mod wasm_network_info_guard {
                     Ok(InfoResponse { protocol, .. }) => {
                         match ProtocolParameters::try_from(protocol).map_err(crate::error::Error::from) {
                             Ok(protocol_params) => {
-                                guard_clone
-                                    .modify(move |network_info| {
-                                        network_info.protocol_parameters = protocol_params;
-                                    })
-                                    .expect("WasmNetworkInfoGuard::modify should be infallible");
+                                let result = guard_clone.modify(move |network_info| {
+                                    network_info.protocol_parameters = protocol_params;
+                                });
+                                if result.is_err() {
+                                    return;
+                                }
+
                                 let updated = instant::now();
                                 guard_clone.refreshed.set(updated);
                             }
@@ -103,14 +108,8 @@ mod wasm_network_info_guard {
         }
 
         pub(super) fn read<T>(&self, f: impl FnOnce(&NetworkInfo) -> T) -> Result<T, Error> {
-            let current = self.unlock_unchecked();
-            Ok(f(&current))
-        }
-
-        pub(super) fn unlock_unchecked(&self) -> NetworkInfo {
-            let current = self.network_info.take();
-            self.network_info.set(current.clone());
-            current
+            let current = self.network_info.try_borrow().map_err(|_| Error::PoisonError)?;
+            Ok(f(current.borrow()))
         }
 
         pub(super) fn error(&self) -> Option<Error> {
@@ -338,16 +337,10 @@ impl Client {
         self.remote_pow_timeout
     }
 
-    #[cfg(not(target_family = "wasm"))]
     /// returns the fallback_to_local_pow
     pub fn get_fallback_to_local_pow(&self) -> bool {
         self.network_info
             .read(|info| info.fallback_to_local_pow)
             .unwrap_or(NetworkInfo::default().fallback_to_local_pow)
-    }
-    #[cfg(target_family = "wasm")]
-    /// returns the fallback_to_local_pow
-    pub fn get_fallback_to_local_pow(&self) -> bool {
-        self.network_info.unlock_unchecked().fallback_to_local_pow
     }
 }
