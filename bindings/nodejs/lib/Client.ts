@@ -484,7 +484,7 @@ export class Client {
     }
 
 
-    async getProtocolParametersJSON(): Promise<String>{
+    async getProtocolParametersJSON(): Promise<string>{
         const response = await this.messageHandler.sendMessage({
             name: 'getProtocolParametersJSON', 
         });
