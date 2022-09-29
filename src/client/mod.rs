@@ -266,10 +266,6 @@ impl Client {
                     "Could not acquire network info within the permitted time frame".to_owned(),
                 ))
             }
-
-            // let info = futures::executor::block_on(async move { self.get_info().await })?.node_info;
-            // let mut client_network_info = self.network_info.write().map_err(|_| crate::Error::PoisonError)?;
-            // client_network_info.protocol_parameters = info.protocol.try_into()?;
         }
         #[cfg(not(target_family = "wasm"))]
         return self.network_info.read(Clone::clone);
