@@ -288,8 +288,10 @@ impl ClientBuilder {
             let healthy_nodes_ = healthy_nodes.clone();
             let network_info_ = network_info.clone();
 
+            // Fetch network info once so we don't return defaults on a potential immediate call to `get_network_info`.
             Client::sync_nodes(&healthy_nodes_, &nodes, &network_info_).await?;
 
+            // Fetch network info every so often in the background.
             wasm_bindgen_futures::spawn_local(async move {
                 loop {
                     gloo_timers::future::sleep(std::time::Duration::from_secs(60)).await;
