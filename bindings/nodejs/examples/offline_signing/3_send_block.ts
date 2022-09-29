@@ -17,7 +17,7 @@ async function run() {
     if (!process.env.NODE_URL) {
         throw new Error('.env NODE_URL is undefined, see .env.example');
     }
-    const onlineClient = new Client({
+    const onlineClient = Client.new({
         // Insert your node URL in the .env.
         nodes: [process.env.NODE_URL],
         localPow: true,
@@ -35,7 +35,7 @@ async function run() {
 
         console.log(
             `Transaction sent: ${process.env.EXPLORER_URL}/block/` +
-                blockIdAndBlock[0],
+            blockIdAndBlock[0],
         );
     } catch (error) {
         console.error(error);

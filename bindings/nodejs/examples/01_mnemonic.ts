@@ -9,7 +9,7 @@ import { Client, initLogger } from '@iota/client';
 async function run() {
     initLogger();
 
-    const client = new Client({});
+    const client = Client.new({});
 
     try {
         const mnemonic = await client.generateMnemonic();

@@ -5,7 +5,7 @@ import { addresses } from '../fixtures/addresses';
 import * as signedTransactionJson from '../fixtures/signedTransaction.json';
 import type { PayloadTypes } from '@iota/types';
 
-const onlineClient = new Client({
+const onlineClient = await Client.new({
     nodes: [
         {
             url: process.env.NODE_URL || 'http://localhost:14265',
@@ -14,7 +14,7 @@ const onlineClient = new Client({
     localPow: true,
 });
 
-const offlineClient = new Client({});
+const offlineClient = await Client.new({});
 
 const secretManager = {
     mnemonic:

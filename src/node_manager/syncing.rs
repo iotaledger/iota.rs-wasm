@@ -1,7 +1,6 @@
 // Copyright 2022 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
-#[cfg(not(target_family = "wasm"))]
 use {
     crate::NetworkInfo,
     bee_api_types::responses::InfoResponse as NodeInfo,
@@ -10,8 +9,12 @@ use {
     std::{
         collections::HashSet,
         sync::{Arc, RwLock},
-        time::Duration,
     },
+};
+
+#[cfg(not(target_family = "wasm"))]
+use {
+    time::Duration,
     tokio::{runtime::Runtime, sync::broadcast::Receiver, time::sleep},
 };
 
@@ -72,7 +75,6 @@ impl Client {
         });
     }
 
-    #[cfg(not(target_family = "wasm"))]
     pub(crate) async fn sync_nodes(
         sync: &Arc<RwLock<HashSet<Node>>>,
         nodes: &HashSet<Node>,

@@ -2,7 +2,7 @@ import { Client } from '../../lib';
 import '../customMatchers';
 import 'dotenv/config';
 
-const client = new Client({
+const client = await Client.new({
     nodes: [
         {
             url: process.env.NODE_URL || 'http://localhost:14265',

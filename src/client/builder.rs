@@ -271,9 +271,32 @@ impl ClientBuilder {
     }
 
     /// Build the Client instance.
-    pub fn finish(self) -> Result<Client> {
+    pub async fn finish(self) -> Result<Client> {
         let network_info = Arc::new(RwLock::new(self.network_info));
         let healthy_nodes = Arc::new(RwLock::new(HashSet::new()));
+
+        #[cfg(target_family = "wasm")]
+        {
+            let nodes = self
+                .node_manager_builder
+                .primary_node
+                .iter()
+                .chain(self.node_manager_builder.nodes.iter())
+                .map(|node| node.clone().into())
+                .collect();
+
+            let healthy_nodes_ = healthy_nodes.clone();
+            let network_info_ = network_info.clone();
+
+            Client::sync_nodes(&healthy_nodes_, &nodes, &network_info_).await?;
+
+            wasm_bindgen_futures::spawn_local(async move {
+                loop {
+                    gloo_timers::future::sleep(std::time::Duration::from_secs(60)).await;
+                    let _ = Client::sync_nodes(&healthy_nodes_, &nodes, &network_info_).await;
+                }
+            })
+        }
 
         #[cfg(not(target_family = "wasm"))]
         let (runtime, sync_kill_sender) = {

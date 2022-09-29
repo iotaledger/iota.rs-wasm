@@ -2,7 +2,7 @@ import { Client } from '../../lib';
 import '../customMatchers';
 import 'dotenv/config';
 
-const offlineClient = new Client({});
+const offlineClient = await Client.new({});
 
 describe('Client utility methods', () => {
     // Requires "stronghold" in cargo toml iota-client features

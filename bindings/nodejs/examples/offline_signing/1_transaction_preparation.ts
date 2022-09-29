@@ -18,7 +18,7 @@ async function run() {
     if (!process.env.NODE_URL) {
         throw new Error('.env NODE_URL is undefined, see .env.example');
     }
-    const onlineClient = new Client({
+    const onlineClient = Client.new({
         // Insert your node URL in the .env.
         nodes: [process.env.NODE_URL],
         localPow: true,

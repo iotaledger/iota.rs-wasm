@@ -14,7 +14,7 @@ async function run() {
         throw new Error('.env NODE_URL is undefined, see .env.example');
     }
 
-    const client = new Client({
+    const client = Client.new({
         // Insert your node URL in the .env.
         nodes: [process.env.NODE_URL],
     });
@@ -56,9 +56,9 @@ async function run() {
             if ('nativeTokens' in output) {
                 output.nativeTokens?.forEach(
                     (token) =>
-                        (totalNativeTokens[token.id] =
-                            (totalNativeTokens[token.id] || 0) +
-                            parseInt(token.amount)),
+                    (totalNativeTokens[token.id] =
+                        (totalNativeTokens[token.id] || 0) +
+                        parseInt(token.amount)),
                 );
             }
 

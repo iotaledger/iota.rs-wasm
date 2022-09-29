@@ -121,16 +121,6 @@ impl Client {
     /// Gets the network related information such as network_id and min_pow_score
     /// and if it's the default one, sync it first and set the NetworkInfo.
     pub fn get_network_info(&self) -> Result<NetworkInfo> {
-        // For WASM we don't have the node syncing process, which updates the network_info every 60 seconds, but the Pow
-        // difficulty or the byte cost could change via a milestone, so we request the node info every time, so we don't
-        // create invalid transactions/blocks.
-        #[cfg(target_family = "wasm")]
-        {
-            let info = futures::executor::block_on(async move { self.get_info().await })?.node_info;
-            let mut client_network_info = self.network_info.write().map_err(|_| crate::Error::PoisonError)?;
-            client_network_info.protocol_parameters = info.protocol.try_into()?;
-        }
-
         Ok(self.network_info.read().map_err(|_| crate::Error::PoisonError)?.clone())
     }
 

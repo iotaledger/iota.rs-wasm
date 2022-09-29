@@ -31,6 +31,7 @@ serde_json = { version = "1.0.85", default-features = false }
 thiserror = { version = "1.0.32", default-features = false }
 url = { version = "2.2.2", default-features = false, features = [ "serde" ] }
 zeroize = { version = "1.5.7", default-features = false, features = [ "zeroize_derive" ] }
+wasm-bindgen-futures = { version = "0.4.32", default-features = false }
 
 # MQTT
 rumqttc = { version = "0.12.0", default-features = false, features = [ "websocket" ], optional = true }

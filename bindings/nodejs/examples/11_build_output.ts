@@ -13,7 +13,7 @@ async function run() {
         throw new Error('.env NODE_URL is undefined, see .env.example');
     }
 
-    const client = new Client({
+    const client = Client.new({
         nodes: [process.env.NODE_URL],
     });
 

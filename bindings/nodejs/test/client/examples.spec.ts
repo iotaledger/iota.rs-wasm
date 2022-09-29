@@ -4,7 +4,7 @@ import '../customMatchers';
 import 'dotenv/config';
 import * as addressOutputs from '../fixtures/addressOutputs.json';
 
-const client = new Client({
+const client = await Client.new({
     nodes: [
         {
             url: process.env.NODE_URL || 'http://localhost:14265',
@@ -117,9 +117,9 @@ describe.skip('Main examples', () => {
             if ('nativeTokens' in output) {
                 output.nativeTokens?.forEach(
                     (token) =>
-                        (totalNativeTokens[token.id] =
-                            (totalNativeTokens[token.id] || 0) +
-                            parseInt(token.amount)),
+                    (totalNativeTokens[token.id] =
+                        (totalNativeTokens[token.id] || 0) +
+                        parseInt(token.amount)),
                 );
             }
 
