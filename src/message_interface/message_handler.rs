@@ -19,6 +19,7 @@ use bee_block::{
     },
     Block as BeeBlock, BlockDto,
 };
+use convert_case::{Case, Casing};
 use futures::{Future, FutureExt};
 #[cfg(not(target_family = "wasm"))]
 use tokio::sync::mpsc::UnboundedSender;
@@ -566,13 +567,43 @@ impl ClientMessageHandler {
             ))),
             Message::Faucet { url, address } => Ok(Response::Faucet(request_funds_from_faucet(&url, &address).await?)),
             Message::GetTokenSupply => Ok(Response::TokenSupply(self.client.get_token_supply()?)),
-            Message::GetProtocolParametersJSON => Ok(Response::ProtocolParametersJSON(serde_json::to_string(
-                &self.client.get_protocol_parameters()?,
-            )?)),
+            Message::GetProtocolParametersJSON => Ok(Response::ProtocolParametersJSON({
+                let params = self.client.get_protocol_parameters()?;
+
+                let param_str: String = serde_json::to_string(&params)?;
+                let mut val: serde_json::Value = serde_json::from_str(&param_str)?;
+
+                let value = snake_caseify(val);
+                let param_str: String = serde_json::to_string(&value)?;
+
+                param_str
+            })),
             Message::GetInfoUpdate => {
                 self.client.get_info_update().await?;
                 Ok(Response::Ok)
             }
         }
     }
+}
+
+fn snake_caseify(value: serde_json::Value) -> serde_json::Value {
+    let result = if let serde_json::Value::Object(mut obj) = value {
+        let keys: Vec<String> = obj.keys().cloned().collect();
+        for key in keys {
+            let snake_case_key = key.to_case(Case::Snake);
+
+            if let serde_json::map::Entry::Occupied(entry) = obj.entry(key) {
+                let value: serde_json::Value = entry.remove();
+
+                let value = snake_caseify(value);
+
+                obj.insert(snake_case_key, value);
+            }
+        }
+        serde_json::Value::Object(obj)
+    } else {
+        value
+    };
+
+    result
 }
