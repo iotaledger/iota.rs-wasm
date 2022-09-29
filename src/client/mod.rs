@@ -74,7 +74,7 @@ mod wasm_network_info_guard {
         }
 
         pub(super) fn refresh(&self, client: Rc<Client>) {
-            let client_clone: Rc<Client> = client.clone();
+            let client_clone: Rc<Client> = client;
             let guard_clone: WasmNetworkInfoGuard = self.clone();
             wasm_bindgen_futures::spawn_local(async move {
                 let info = client_clone.get_info();
@@ -242,7 +242,7 @@ impl Client {
             // we return the network info immediately, otherwise we update
             let allowed_duration_ms = 60f64 * 1000f64;
             if (start_time - last_refreshed) <= allowed_duration_ms {
-                return Ok(self.network_info.read(Clone::clone)?);
+                self.network_info.read(Clone::clone)
             } else {
                 // Here we emulate block_on which doesn't work in Wasm.
                 self.network_info.refresh(std::rc::Rc::new(self.clone()));
@@ -259,12 +259,12 @@ impl Client {
                         return Err(err);
                     } else if self.network_info.refreshed.get() > start_time {
                         // This means that the network info has successfully been retrieved in the meantime.
-                        return Ok(self.network_info.read(Clone::clone)?);
+                        return self.network_info.read(Clone::clone);
                     }
                 }
-                return Err(Error::NodeError(
+                Err(Error::NodeError(
                     "Could not acquire network info within the permitted time frame".to_owned(),
-                ));
+                ))
             }
 
             // let info = futures::executor::block_on(async move { self.get_info().await })?.node_info;
