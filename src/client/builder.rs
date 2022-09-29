@@ -24,6 +24,8 @@ use crate::{
     },
 };
 
+use super::network_info_updates::NetworkInfoGuard;
+
 /// Struct containing network and PoW related information
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct NetworkInfo {
@@ -272,7 +274,10 @@ impl ClientBuilder {
 
     /// Build the Client instance.
     pub fn finish(self) -> Result<Client> {
+        #[cfg(not(target_family = "wasm"))]
         let network_info = Arc::new(RwLock::new(self.network_info));
+        #[cfg(target_family = "wasm")]
+        let network_info = std::rc::Rc::new(NetworkInfoGuard::new(self.network_info)); 
         let healthy_nodes = Arc::new(RwLock::new(HashSet::new()));
 
         #[cfg(not(target_family = "wasm"))]
