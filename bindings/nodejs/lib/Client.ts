@@ -45,7 +45,7 @@ import type { INodeInfoWrapper } from '../types/nodeInfo';
 export class Client {
     private messageHandler: MessageHandler | undefined;
 
-    constructor() {}
+    constructor() { }
 
     static async new(options: IClientOptions): Promise<Client> {
         const client = new Client();
@@ -488,11 +488,18 @@ export class Client {
     }
 
     /** Returns the protocol parameters as a JSON string. */
-    async getProtocolParameters(): Promise<string>{
+    async getProtocolParameters(): Promise<string> {
         const response = await this.messageHandler!.sendMessage({
-            name: 'getProtocolParametersJSON', 
+            name: 'getProtocolParametersJSON',
         });
         return JSON.parse(response).payload
+    }
+
+    /** Gets and updates the internally cached network info. */
+    async getInfoUpdate(): Promise<void> {
+        await this.messageHandler!.sendMessage({
+            name: 'getInfoUpdate'
+        });
     }
 
     /**
@@ -617,7 +624,7 @@ export class Client {
             {
                 name: 'getTokenSupply',
             }
-        ); 
+        );
 
         return JSON.parse(response).payload;
     }

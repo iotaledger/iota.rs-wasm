@@ -569,6 +569,10 @@ impl ClientMessageHandler {
             Message::GetProtocolParametersJSON => Ok(Response::ProtocolParametersJSON(serde_json::to_string(
                 &self.client.get_protocol_parameters()?,
             )?)),
+            Message::GetInfoUpdate => {
+                self.client.get_info_update().await?;
+                Ok(Response::Ok)
+            }
         }
     }
 }

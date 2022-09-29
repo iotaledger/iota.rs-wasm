@@ -67,6 +67,7 @@ import type {
     __BuildFoundryOutputMessage__,
     __BuildNftOutputMessage__,
     __GetProtocolParametersJSON__,
+    __GetInfoUpdate__,
 } from './client';
 
 export type __ClientMessages__ =
@@ -103,6 +104,7 @@ export type __ClientMessages__ =
     | __GetNodeInfoMessage__
     | __GetPeersMessage__
     | __GetProtocolParametersJSON__
+    | __GetInfoUpdate__
     | __PostBlockRawMessage__
     | __GetBlockRawMessage__
     | __GetMilestoneByIdMessage__

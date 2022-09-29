@@ -220,6 +220,10 @@ export interface __GetProtocolParametersJSON__ {
     name: 'getProtocolParametersJSON';
 }
 
+export interface __GetInfoUpdate__ {
+    name: 'getInfoUpdate';
+}
+
 export interface __PostBlockRawMessage__ {
     name: 'postBlockRaw';
     data: {

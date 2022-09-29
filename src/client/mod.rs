@@ -129,6 +129,16 @@ impl Client {
         Ok(self.get_network_info()?.protocol_parameters)
     }
 
+    /// Gets and updates the internally cached network info.
+    pub async fn get_info_update(&self) -> Result<()> {
+        let info = self.get_info().await?;
+
+        let mut network_info = self.network_info.write().map_err(|_| crate::Error::PoisonError)?;
+        network_info.protocol_parameters = ProtocolParameters::try_from(info.node_info.protocol.clone())?;
+
+        Ok(())
+    }
+
     /// Gets the protocol version of the node we're connecting to.
     pub fn get_protocol_version(&self) -> Result<u8> {
         Ok(self.get_network_info()?.protocol_parameters.protocol_version())

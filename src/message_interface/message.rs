@@ -132,6 +132,8 @@ pub enum Message {
     GetLocalPow,
     /// Get fallback to local proof of work timeout
     GetFallbackToLocalPow,
+    /// Gets and updates the internally cached network info.
+    GetInfoUpdate,
     /// Returns the unhealthy nodes.
     #[cfg(not(target_family = "wasm"))]
     UnhealthyNodes,

@@ -291,13 +291,8 @@ impl ClientBuilder {
             // Fetch network info once so we don't return defaults on a potential immediate call to `get_network_info`.
             Client::sync_nodes(&healthy_nodes_, &nodes, &network_info_).await?;
 
-            // Fetch network info every so often in the background.
-            wasm_bindgen_futures::spawn_local(async move {
-                loop {
-                    gloo_timers::future::sleep(std::time::Duration::from_secs(60)).await;
-                    let _ = Client::sync_nodes(&healthy_nodes_, &nodes, &network_info_).await;
-                }
-            })
+            // We cannot spawn a loop, because we have no mechanism to stop it
+            // so the program hangs as long as that loop is active.
         }
 
         #[cfg(not(target_family = "wasm"))]
