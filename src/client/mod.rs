@@ -6,11 +6,11 @@
 mod builder;
 mod high_level;
 
+use std::time::Duration;
 #[cfg(not(target_family = "wasm"))]
-use std::sync::{Arc, RwLock};
 use std::{
     borrow::{Borrow, BorrowMut},
-    time::Duration,
+    sync::{Arc, RwLock},
 };
 
 #[cfg(not(target_family = "wasm"))]
@@ -30,7 +30,7 @@ impl NetworkInfoGuard {
             .map_err(|_| Error::PoisonError)
     }
 
-    pub(crate) fn read<T>(&self, f: impl FnOnce(&NetworkInfo) -> T) -> Result<T> {
+    fn read<T>(&self, f: impl FnOnce(&NetworkInfo) -> T) -> Result<T> {
         self.0
             .read()
             .map(|guard| f(guard.borrow()))
@@ -39,7 +39,7 @@ impl NetworkInfoGuard {
 }
 
 #[cfg(target_family = "wasm")]
-use wasm_network_info_guard::WasmNetworkInfoGuard as NetworkInfoGuard;
+pub(crate) type NetworkInfoGuard = wasm_network_info_guard::WasmNetworkInfoGuard;
 
 #[cfg(target_family = "wasm")]
 mod wasm_network_info_guard {
@@ -49,14 +49,13 @@ mod wasm_network_info_guard {
     use bee_block::protocol::ProtocolParameters;
 
     use crate::{Client, Error, NetworkInfo};
+    #[derive(Clone)]
     pub(crate) struct WasmNetworkInfoGuard {
-        network_info: Rc<Cell<NetworkInfo>>,
+        pub(super) network_info: Rc<Cell<NetworkInfo>>,
         // The unix timestamp in ms when the NetworkInfo was last observed to be successfully retrieved from the node.
-        refreshed: Rc<Cell<f64>>,
-        update_error: Rc<Cell<Option<Error>>>,
+        pub(super) refreshed: Rc<Cell<f64>>,
+        pub(super) update_error: Rc<Cell<Option<Error>>>,
     }
-
-    pub(crate) type NetworkInfoGuardRc = Rc<WasmNetworkInfoGuard>;
 
     impl WasmNetworkInfoGuard {
         pub(crate) fn new(network_info: NetworkInfo) -> Self {
@@ -67,24 +66,27 @@ mod wasm_network_info_guard {
             }
         }
 
-        fn modify(&self, f: impl FnOnce(&mut NetworkInfo)) -> Result<(), Error> {
+        pub(crate) fn modify<T>(&self, f: impl FnOnce(&mut NetworkInfo) -> T) -> Result<T, Error> {
             let mut current = self.network_info.take();
-            f(&mut current);
+            let output = f(&mut current);
             self.network_info.set(current);
-            Ok(())
+            Ok(output)
         }
 
-        fn refresh(self: &Rc<Self>, client: &Client) {
-            let info = client.get_info();
-            let guard_clone: Rc<WasmNetworkInfoGuard> = self.clone();
+        pub(super) fn refresh(&self, client: Rc<Client>) {
+            let client_clone: Rc<Client> = client.clone();
+            let guard_clone: WasmNetworkInfoGuard = self.clone();
             wasm_bindgen_futures::spawn_local(async move {
+                let info = client_clone.get_info();
                 match info.await.map(|wrapper| wrapper.node_info) {
                     Ok(InfoResponse { protocol, .. }) => {
                         match ProtocolParameters::try_from(protocol).map_err(crate::error::Error::from) {
                             Ok(protocol_params) => {
-                                guard_clone.modify(move |network_info| {
-                                    network_info.protocol_parameters = protocol_params;
-                                });
+                                guard_clone
+                                    .modify(move |network_info| {
+                                        network_info.protocol_parameters = protocol_params;
+                                    })
+                                    .expect("WasmNetworkInfoGuard::modify should be infallible");
                                 let updated = instant::now();
                                 guard_clone.refreshed.set(updated);
                             }
@@ -100,14 +102,19 @@ mod wasm_network_info_guard {
             });
         }
 
-        pub(super) fn unlock(&self) -> Result<NetworkInfo, Error> {
-            todo!()
+        pub(super) fn read<T>(&self, f: impl FnOnce(&NetworkInfo) -> T) -> Result<T, Error> {
+            let current = self.unlock_unchecked();
+            Ok(f(&current))
         }
 
         pub(super) fn unlock_unchecked(&self) -> NetworkInfo {
             let current = self.network_info.take();
             self.network_info.set(current.clone());
             current
+        }
+
+        pub(super) fn error(&self) -> Option<Error> {
+            self.update_error.take()
         }
     }
 }
@@ -224,20 +231,48 @@ impl Client {
     /// and if it's the default one, sync it first and set the NetworkInfo.
     pub fn get_network_info(&self) -> Result<NetworkInfo> {
         // For WASM we don't have the node syncing process, which updates the network_info every 60 seconds, but the Pow
-        // difficulty or the byte cost could change via a milestone, so we request the node info every time, so we don't
-        // create invalid transactions/blocks.
+        // difficulty or the byte cost could change via a milestone, hence we make sure to update the network info if it
+        // is more than 60 seconds old, so we don't create invalid transactions/blocks.
         #[cfg(target_family = "wasm")]
         {
+            // These values are milliseconds since the unix epoch.
+            let last_refreshed = self.network_info.refreshed.get();
+            let start_time = instant::now();
+            // if the network info was refreshed less than 60 seconds ago
+            // we return the network info immediately, otherwise we update
+            let allowed_duration_ms = 60f64 * 1000f64;
+            if (start_time - last_refreshed) <= allowed_duration_ms {
+                return Ok(self.network_info.read(Clone::clone)?);
+            } else {
+                // Here we emulate block_on which doesn't work in Wasm.
+                self.network_info.refresh(std::rc::Rc::new(self.clone()));
+                let time_out = self.api_timeout;
+                let mut elapsed = Duration::default();
+                while elapsed < time_out {
+                    let right_now = instant::now();
+                    if right_now > start_time {
+                        elapsed += Duration::from_millis((right_now as u64) - (start_time as u64));
+                    }
+                    elapsed += Duration::from_millis(1);
+                    if let Some(err) = self.network_info.error() {
+                        // The update failed.
+                        return Err(err);
+                    } else if self.network_info.refreshed.get() > start_time {
+                        // This means that the network info has successfully been retrieved in the meantime.
+                        return Ok(self.network_info.read(Clone::clone)?);
+                    }
+                }
+                return Err(Error::NodeError(
+                    "Could not acquire network info within the permitted time frame".to_owned(),
+                ));
+            }
+
             // let info = futures::executor::block_on(async move { self.get_info().await })?.node_info;
             // let mut client_network_info = self.network_info.write().map_err(|_| crate::Error::PoisonError)?;
             // client_network_info.protocol_parameters = info.protocol.try_into()?;
         }
         #[cfg(not(target_family = "wasm"))]
         return self.network_info.read(Clone::clone);
-        #[cfg(target_family = "wasm")]
-        {
-            todo!()
-        }
     }
 
     /// Gets the protocol parameters of the node we're connecting to.
@@ -285,31 +320,18 @@ impl Client {
         Ok(self.get_network_info()?.protocol_parameters.token_supply())
     }
 
-    #[cfg(not(target_family = "wasm"))]
     /// returns the tips interval
     pub fn get_tips_interval(&self) -> u64 {
         self.network_info
             .read(|info| info.tips_interval)
             .unwrap_or(DEFAULT_TIPS_INTERVAL)
     }
-    #[cfg(target_family = "wasm")]
-    /// returns the tips interval
-    pub fn get_tips_interval(&self) -> u64 {
-        self.network_info.unlock_unchecked().tips_interval
-    }
 
-    #[cfg(not(target_family = "wasm"))]
     /// returns if local pow should be used or not
     pub fn get_local_pow(&self) -> bool {
         self.network_info
             .read(|info| info.local_pow)
             .unwrap_or(NetworkInfo::default().local_pow)
-    }
-
-    #[cfg(target_family = "wasm")]
-    /// returns if local pow should be used or not
-    pub fn get_local_pow(&self) -> bool {
-        self.network_info.unlock_unchecked().local_pow
     }
 
     pub(crate) fn get_timeout(&self) -> Duration {

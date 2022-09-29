@@ -276,7 +276,7 @@ impl ClientBuilder {
         #[cfg(not(target_family = "wasm"))]
         let network_info = NetworkInfoGuard::new(self.network_info);
         #[cfg(target_family = "wasm")]
-        let network_info = std::rc::Rc::new(NetworkInfoGuard::new(self.network_info));
+        let network_info = NetworkInfoGuard::new(self.network_info);
         let healthy_nodes = Arc::new(RwLock::new(HashSet::new()));
 
         #[cfg(not(target_family = "wasm"))]
