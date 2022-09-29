@@ -8,51 +8,85 @@ mod high_level;
 
 #[cfg(not(target_family = "wasm"))]
 use std::sync::{Arc, RwLock};
-use std::time::Duration;
+use std::{
+    borrow::{Borrow, BorrowMut},
+    time::Duration,
+};
+
+#[cfg(not(target_family = "wasm"))]
+#[derive(Clone)]
+pub(crate) struct NetworkInfoGuard(pub(crate) Arc<RwLock<NetworkInfo>>);
+
+#[cfg(not(target_family = "wasm"))]
+impl NetworkInfoGuard {
+    pub(crate) fn new(network_info: NetworkInfo) -> Self {
+        Self(Arc::new(RwLock::new(network_info)))
+    }
+
+    pub(crate) fn modify<T>(&self, f: impl FnOnce(&mut NetworkInfo) -> T) -> Result<T> {
+        self.0
+            .write()
+            .map(|mut network_guard| f(network_guard.borrow_mut()))
+            .map_err(|_| Error::PoisonError)
+    }
+
+    pub(crate) fn read<T>(&self, f: impl FnOnce(&NetworkInfo) -> T) -> Result<T> {
+        self.0
+            .read()
+            .map(|guard| f(guard.borrow()))
+            .map_err(|_| Error::PoisonError)
+    }
+}
 
 #[cfg(target_family = "wasm")]
-use network_info_updates::{NetworkInfoGuard, NetworkInfoGuardRc};
+use wasm_network_info_guard::WasmNetworkInfoGuard as NetworkInfoGuard;
 
 #[cfg(target_family = "wasm")]
-mod network_info_updates {
+mod wasm_network_info_guard {
     use std::{cell::Cell, rc::Rc};
 
     use bee_api_types::responses::InfoResponse;
     use bee_block::protocol::ProtocolParameters;
 
     use crate::{Client, Error, NetworkInfo};
-    pub(crate) struct NetworkInfoGuard {
+    pub(crate) struct WasmNetworkInfoGuard {
         network_info: Rc<Cell<NetworkInfo>>,
-        // The unix timestamp in ms when the NetworkInfo was last observed to be successfully retrieved.
-        last_successful_update: Rc<Cell<f64>>,
+        // The unix timestamp in ms when the NetworkInfo was last observed to be successfully retrieved from the node.
+        refreshed: Rc<Cell<f64>>,
         update_error: Rc<Cell<Option<Error>>>,
     }
 
-    pub(crate) type NetworkInfoGuardRc = Rc<NetworkInfoGuard>;
+    pub(crate) type NetworkInfoGuardRc = Rc<WasmNetworkInfoGuard>;
 
-    impl NetworkInfoGuard {
+    impl WasmNetworkInfoGuard {
         pub(crate) fn new(network_info: NetworkInfo) -> Self {
             Self {
                 network_info: Rc::new(Cell::new(network_info)),
-                last_successful_update: Rc::new(Cell::new(instant::now())),
-                update_error: Rc::new(Cell::new(None)), 
+                refreshed: Rc::new(Cell::new(instant::now())),
+                update_error: Rc::new(Cell::new(None)),
             }
         }
 
-        fn update(self: &Rc<Self>, client: &Client) {
+        fn modify(&self, f: impl FnOnce(&mut NetworkInfo)) -> Result<(), Error> {
+            let mut current = self.network_info.take();
+            f(&mut current);
+            self.network_info.set(current);
+            Ok(())
+        }
+
+        fn refresh(self: &Rc<Self>, client: &Client) {
             let info = client.get_info();
-            let guard_clone: Rc<NetworkInfoGuard> = self.clone();
+            let guard_clone: Rc<WasmNetworkInfoGuard> = self.clone();
             wasm_bindgen_futures::spawn_local(async move {
                 match info.await.map(|wrapper| wrapper.node_info) {
                     Ok(InfoResponse { protocol, .. }) => {
                         match ProtocolParameters::try_from(protocol).map_err(crate::error::Error::from) {
                             Ok(protocol_params) => {
-                                let mut network_info = guard_clone.network_info.take();
-                                network_info.protocol_parameters = protocol_params;
+                                guard_clone.modify(move |network_info| {
+                                    network_info.protocol_parameters = protocol_params;
+                                });
                                 let updated = instant::now();
-                                guard_clone.network_info.set(network_info);
-                                guard_clone.last_successful_update.set(updated);
-                                
+                                guard_clone.refreshed.set(updated);
                             }
                             Err(error) => {
                                 guard_clone.update_error.set(Some(error));
@@ -90,7 +124,7 @@ use {
 };
 
 pub use self::builder::{ClientBuilder, NetworkInfo};
-use crate::{constants::DEFAULT_TIPS_INTERVAL, error::Result};
+use crate::{constants::DEFAULT_TIPS_INTERVAL, error::Result, Error};
 
 /// An instance of the client using HORNET or Bee URI
 #[derive(Clone)]
@@ -112,10 +146,7 @@ pub struct Client {
     pub(crate) broker_options: BrokerOptions,
     #[cfg(feature = "mqtt")]
     pub(crate) mqtt_event_channel: (Arc<WatchSender<MqttEvent>>, WatchReceiver<MqttEvent>),
-    #[cfg(not(target_family = "wasm"))]
-    pub(crate) network_info: Arc<RwLock<NetworkInfo>>,
-    #[cfg(target_family = "wasm")]
-    pub(crate) network_info: NetworkInfoGuardRc,
+    pub(crate) network_info: NetworkInfoGuard,
     /// HTTP request timeout.
     pub(crate) api_timeout: Duration,
     /// HTTP request timeout for remote PoW API call.
@@ -132,7 +163,7 @@ impl std::fmt::Debug for Client {
         d.field("node_manager", &self.node_manager);
         #[cfg(feature = "mqtt")]
         d.field("broker_options", &self.broker_options);
-        d.field("network_info", &self.network_info).finish()
+        d.field("network_info", &self.network_info.0).finish()
     }
 }
 
@@ -202,7 +233,7 @@ impl Client {
             // client_network_info.protocol_parameters = info.protocol.try_into()?;
         }
         #[cfg(not(target_family = "wasm"))]
-        return Ok(self.network_info.read().map_err(|_| crate::Error::PoisonError)?.clone());
+        return self.network_info.read(Clone::clone);
         #[cfg(target_family = "wasm")]
         {
             todo!()
@@ -258,8 +289,8 @@ impl Client {
     /// returns the tips interval
     pub fn get_tips_interval(&self) -> u64 {
         self.network_info
-            .read()
-            .map_or(DEFAULT_TIPS_INTERVAL, |info| info.tips_interval)
+            .read(|info| info.tips_interval)
+            .unwrap_or(DEFAULT_TIPS_INTERVAL)
     }
     #[cfg(target_family = "wasm")]
     /// returns the tips interval
@@ -271,8 +302,8 @@ impl Client {
     /// returns if local pow should be used or not
     pub fn get_local_pow(&self) -> bool {
         self.network_info
-            .read()
-            .map_or(NetworkInfo::default().local_pow, |info| info.local_pow)
+            .read(|info| info.local_pow)
+            .unwrap_or(NetworkInfo::default().local_pow)
     }
 
     #[cfg(target_family = "wasm")]
@@ -293,10 +324,8 @@ impl Client {
     /// returns the fallback_to_local_pow
     pub fn get_fallback_to_local_pow(&self) -> bool {
         self.network_info
-            .read()
-            .map_or(NetworkInfo::default().fallback_to_local_pow, |info| {
-                info.fallback_to_local_pow
-            })
+            .read(|info| info.fallback_to_local_pow)
+            .unwrap_or(NetworkInfo::default().fallback_to_local_pow)
     }
     #[cfg(target_family = "wasm")]
     /// returns the fallback_to_local_pow

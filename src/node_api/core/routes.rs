@@ -169,25 +169,24 @@ impl Client {
                         // Without this we get:within `impl Future<Output = [async output]>`, the trait `Send` is not
                         // implemented for `std::sync::RwLockWriteGuard<'_, NetworkInfo>`
                         {
-                            let mut client_network_info =
-                                self.network_info.write().map_err(|_| crate::Error::PoisonError)?;
-                            // switch to local PoW
-                            client_network_info.local_pow = true;
+                            self.network_info.modify(|info| {
+                                info.local_pow = true;
+                            })?;
                         }
                         let block_res = crate::api::finish_pow(self, block.payload().cloned()).await;
                         let block_with_local_pow = match block_res {
                             Ok(block) => {
                                 // reset local PoW state
-                                let mut client_network_info =
-                                    self.network_info.write().map_err(|_| crate::Error::PoisonError)?;
-                                client_network_info.local_pow = false;
+                                self.network_info.modify(|info| {
+                                    info.local_pow = false;
+                                })?;
                                 block
                             }
                             Err(e) => {
                                 // reset local PoW state
-                                let mut client_network_info =
-                                    self.network_info.write().map_err(|_| crate::Error::PoisonError)?;
-                                client_network_info.local_pow = false;
+                                self.network_info.modify(|info| {
+                                    info.local_pow = false;
+                                })?;
                                 return Err(e);
                             }
                         };
@@ -238,25 +237,26 @@ impl Client {
                         // Without this we get:within `impl Future<Output = [async output]>`, the trait `Send` is not
                         // implemented for `std::sync::RwLockWriteGuard<'_, NetworkInfo>`
                         {
-                            let mut client_network_info =
-                                self.network_info.write().map_err(|_| crate::Error::PoisonError)?;
                             // switch to local PoW
-                            client_network_info.local_pow = true;
+                            self.network_info.modify(|info| {
+                                info.local_pow = true;
+                            })?;
                         }
+
                         let block_res = crate::api::finish_pow(self, block.payload().cloned()).await;
                         let block_with_local_pow = match block_res {
                             Ok(block) => {
                                 // reset local PoW state
-                                let mut client_network_info =
-                                    self.network_info.write().map_err(|_| crate::Error::PoisonError)?;
-                                client_network_info.local_pow = false;
+                                self.network_info.modify(|info| {
+                                    info.local_pow = false;
+                                })?;
                                 block
                             }
                             Err(e) => {
                                 // reset local PoW state
-                                let mut client_network_info =
-                                    self.network_info.write().map_err(|_| crate::Error::PoisonError)?;
-                                client_network_info.local_pow = false;
+                                self.network_info.modify(|info| {
+                                    info.local_pow = false;
+                                })?;
                                 return Err(e);
                             }
                         };

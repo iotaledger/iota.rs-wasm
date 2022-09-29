@@ -22,9 +22,8 @@ use crate::{
         builder::validate_url,
         node::{Node, NodeAuth},
     },
+    NetworkInfoGuard,
 };
-
-use super::network_info_updates::NetworkInfoGuard;
 
 /// Struct containing network and PoW related information
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -275,9 +274,9 @@ impl ClientBuilder {
     /// Build the Client instance.
     pub fn finish(self) -> Result<Client> {
         #[cfg(not(target_family = "wasm"))]
-        let network_info = Arc::new(RwLock::new(self.network_info));
+        let network_info = NetworkInfoGuard::new(self.network_info);
         #[cfg(target_family = "wasm")]
-        let network_info = std::rc::Rc::new(NetworkInfoGuard::new(self.network_info)); 
+        let network_info = std::rc::Rc::new(NetworkInfoGuard::new(self.network_info));
         let healthy_nodes = Arc::new(RwLock::new(HashSet::new()));
 
         #[cfg(not(target_family = "wasm"))]
@@ -291,7 +290,7 @@ impl ClientBuilder {
                 .collect();
 
             let healthy_nodes_ = healthy_nodes.clone();
-            let network_info_ = network_info.clone();
+            let network_info_ = network_info.0.clone();
             let (sync_kill_sender, sync_kill_receiver) = channel(1);
 
             let runtime = std::thread::spawn(move || {
