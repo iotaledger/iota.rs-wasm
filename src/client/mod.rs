@@ -261,7 +261,7 @@ impl Client {
                         return self.network_info.read(Clone::clone);
                     }
                 }
-                Err(Error::NodeError(
+                Err(crate::error::Error::NodeError(
                     "Could not acquire network info within the permitted time frame".to_owned(),
                 ))
             }
