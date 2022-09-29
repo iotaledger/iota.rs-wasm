@@ -59,6 +59,7 @@ mod wasm_network_info_guard {
         // The unix timestamp in ms when the NetworkInfo was last observed to be successfully retrieved from the node.
         pub(super) refreshed: Rc<Cell<f64>>,
         pub(super) update_error: Rc<Cell<Option<Error>>>,
+        pub(super) has_been_refreshed: Cell<bool>,
     }
 
     impl WasmNetworkInfoGuard {
@@ -67,6 +68,7 @@ mod wasm_network_info_guard {
                 network_info: Rc::new(RefCell::new(network_info)),
                 refreshed: Rc::new(Cell::new(instant::now())),
                 update_error: Rc::new(Cell::new(None)),
+                has_been_refreshed: Cell::new(false),
             }
         }
 
@@ -77,8 +79,14 @@ mod wasm_network_info_guard {
         }
 
         pub(super) fn refresh(&self, client: Rc<Client>) {
+            self.has_been_refreshed.set(true);
             let client_clone: Rc<Client> = client;
-            let guard_clone: WasmNetworkInfoGuard = self.clone();
+            let guard_clone = WasmNetworkInfoGuard {
+                network_info: self.network_info.clone(),
+                refreshed: self.refreshed.clone(),
+                update_error: self.update_error.clone(),
+                has_been_refreshed: Cell::new(true),
+            };
             wasm_bindgen_futures::spawn_local(async move {
                 let info = client_clone.get_info();
                 match info.await.map(|wrapper| wrapper.node_info) {
@@ -91,7 +99,6 @@ mod wasm_network_info_guard {
                                 if result.is_err() {
                                     return;
                                 }
-
                                 let updated = instant::now();
                                 guard_clone.refreshed.set(updated);
                             }
@@ -240,7 +247,7 @@ impl Client {
             // if the network info was refreshed less than 60 seconds ago
             // we return the network info immediately, otherwise we update
             let allowed_duration_ms = 60f64 * 1000f64;
-            if (start_time - last_refreshed) <= allowed_duration_ms {
+            if (start_time - last_refreshed) <= allowed_duration_ms && self.network_info.has_been_refreshed.get() {
                 self.network_info.read(Clone::clone)
             } else {
                 // Here we emulate block_on which doesn't work in Wasm.
