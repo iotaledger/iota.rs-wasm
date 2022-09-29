@@ -253,13 +253,11 @@ impl Client {
                 // Here we emulate block_on which doesn't work in Wasm.
                 self.network_info.refresh(std::rc::Rc::new(self.clone()));
                 let time_out = self.api_timeout;
-                let mut elapsed = Duration::default();
-                while elapsed < time_out {
+                loop {
                     let right_now = instant::now();
-                    if right_now > start_time {
-                        elapsed += Duration::from_millis((right_now as u64) - (start_time as u64));
+                    if (right_now > start_time) && (right_now - start_time) > time_out.as_millis() as f64 {
+                        break;
                     }
-                    elapsed += Duration::from_millis(1);
                     if let Some(err) = self.network_info.error() {
                         // The update failed.
                         return Err(err);
