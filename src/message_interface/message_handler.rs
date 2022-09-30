@@ -567,7 +567,7 @@ impl ClientMessageHandler {
             ))),
             Message::Faucet { url, address } => Ok(Response::Faucet(request_funds_from_faucet(&url, &address).await?)),
             Message::GetTokenSupply => Ok(Response::TokenSupply(self.client.get_token_supply()?)),
-            Message::GetProtocolParametersJSON => Ok(Response::ProtocolParametersJSON({
+            Message::GetProtocolResponseJson => Ok(Response::GetProtocolResponseJson({
                 let info: NetworkInfoDto = self.client.get_network_info()?.into();
                 let protocol_response: ProtocolResponse = info.protocol_parameters;
 

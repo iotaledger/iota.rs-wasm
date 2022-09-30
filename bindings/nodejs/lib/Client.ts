@@ -487,10 +487,10 @@ export class Client {
         return JSON.parse(response).payload;
     }
 
-    /** Returns the protocol parameters as a JSON string. */
-    async getProtocolParameters(): Promise<string> {
+    /** Returns the protocol response as a JSON string. */
+    async getProtocolResponse(): Promise<string> {
         const response = await this.messageHandler!.sendMessage({
-            name: 'getProtocolParametersJSON',
+            name: 'getProtocolResponseJson',
         });
         return JSON.parse(response).payload
     }

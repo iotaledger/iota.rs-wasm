@@ -212,8 +212,8 @@ pub enum Response {
     /// - [`GetTokenSupply`](crate::message_interface::Message::GetTokenSupply)
     TokenSupply(u64),
     //// Response for:
-    /// - [`GetProtocolParametersJSON`](crate::message_interface::Message::GetProtocolParametersJSON)
-    ProtocolParametersJSON(String),
+    /// - [`GetProtocolResponseJson`](crate::message_interface::Message::GetProtocolResponseJson)
+    GetProtocolResponseJson(String),
     /// Response for:
     /// - [`StoreMnemonic`](crate::message_interface::Message::StoreMnemonic)
     Ok,
