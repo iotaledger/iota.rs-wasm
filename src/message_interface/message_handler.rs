@@ -573,7 +573,21 @@ impl ClientMessageHandler {
                 let param_str: String = serde_json::to_string(&params)?;
                 let mut val: serde_json::Value = serde_json::from_str(&param_str)?;
 
+                // ProtocolParameters comes out camelCase for unknown reasons.
                 let value = snake_caseify(val);
+
+                // convert_case converts bech32Hrp to bech_32_hrp,
+                // but ProtocolParameters is defined with bech32_hrp.
+                let value = if let serde_json::Value::Object(mut map) = value {
+                    if let serde_json::map::Entry::Occupied(entry) = map.entry("bech_32_hrp") {
+                        let inner = entry.remove();
+                        map.insert("bech32_hrp".to_owned(), inner);
+                    }
+                    serde_json::Value::Object(map)
+                } else {
+                    value
+                };
+
                 let param_str: String = serde_json::to_string(&value)?;
 
                 param_str
