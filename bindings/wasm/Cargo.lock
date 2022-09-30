@@ -303,15 +303,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "convert_case"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
-dependencies = [
- "unicode-segmentation",
-]
-
-[[package]]
 name = "cpufeatures"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -826,7 +817,7 @@ dependencies = [
 
 [[package]]
 name = "iota-client"
-version = "2.0.0"
+version = "2.0.1-rc.2"
 dependencies = [
  "async-trait",
  "backtrace",
@@ -834,7 +825,6 @@ dependencies = [
  "bee-block",
  "bee-pow",
  "bee-ternary",
- "convert_case",
  "derive_builder",
  "futures",
  "gloo-timers",
@@ -1640,12 +1630,6 @@ checksum = "854cbdc4f7bc6ae19c820d44abdc3277ac3e1b2b93db20a636825d9322fb60e6"
 dependencies = [
  "tinyvec",
 ]
-
-[[package]]
-name = "unicode-segmentation"
-version = "1.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fdbf052a0783de01e944a6ce7a8cb939e295b1e7be835a1112c3b9a7f047a5a"
 
 [[package]]
 name = "unicode-xid"
