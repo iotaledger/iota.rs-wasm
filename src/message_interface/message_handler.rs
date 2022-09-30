@@ -6,6 +6,7 @@ use std::sync::mpsc::Sender;
 use std::{any::Any, panic::AssertUnwindSafe};
 
 use backtrace::Backtrace;
+use bee_api_types::responses::ProtocolResponse;
 use bee_block::{
     address::dto::AddressDto,
     input::dto::UtxoInputDto,
@@ -19,7 +20,6 @@ use bee_block::{
     },
     Block as BeeBlock, BlockDto,
 };
-use convert_case::{Case, Casing};
 use futures::{Future, FutureExt};
 #[cfg(not(target_family = "wasm"))]
 use tokio::sync::mpsc::UnboundedSender;
@@ -32,7 +32,7 @@ use crate::secret::SecretManager;
 use crate::{
     api::{PreparedTransactionData, PreparedTransactionDataDto},
     message_interface::{message::Message, response::Response},
-    request_funds_from_faucet, Client, Result,
+    request_funds_from_faucet, Client, NetworkInfoDto, Result,
 };
 
 fn panic_to_response_message(panic: Box<dyn Any>) -> Response {
@@ -568,29 +568,12 @@ impl ClientMessageHandler {
             Message::Faucet { url, address } => Ok(Response::Faucet(request_funds_from_faucet(&url, &address).await?)),
             Message::GetTokenSupply => Ok(Response::TokenSupply(self.client.get_token_supply()?)),
             Message::GetProtocolParametersJSON => Ok(Response::ProtocolParametersJSON({
-                let params = self.client.get_protocol_parameters()?;
+                let info: NetworkInfoDto = self.client.get_network_info()?.into();
+                let protocol_response: ProtocolResponse = info.protocol_parameters;
 
-                let param_str: String = serde_json::to_string(&params)?;
-                let mut val: serde_json::Value = serde_json::from_str(&param_str)?;
+                let protocol_response_json: String = serde_json::to_string(&protocol_response)?;
 
-                // ProtocolParameters comes out camelCase for unknown reasons.
-                let value = snake_caseify(val);
-
-                // convert_case converts bech32Hrp to bech_32_hrp,
-                // but ProtocolParameters is defined with bech32_hrp.
-                let value = if let serde_json::Value::Object(mut map) = value {
-                    if let serde_json::map::Entry::Occupied(entry) = map.entry("bech_32_hrp") {
-                        let inner = entry.remove();
-                        map.insert("bech32_hrp".to_owned(), inner);
-                    }
-                    serde_json::Value::Object(map)
-                } else {
-                    value
-                };
-
-                let param_str: String = serde_json::to_string(&value)?;
-
-                param_str
+                protocol_response_json
             })),
             Message::GetInfoUpdate => {
                 self.client.get_info_update().await?;
@@ -598,26 +581,4 @@ impl ClientMessageHandler {
             }
         }
     }
-}
-
-fn snake_caseify(value: serde_json::Value) -> serde_json::Value {
-    let result = if let serde_json::Value::Object(mut obj) = value {
-        let keys: Vec<String> = obj.keys().cloned().collect();
-        for key in keys {
-            let snake_case_key = key.to_case(Case::Snake);
-
-            if let serde_json::map::Entry::Occupied(entry) = obj.entry(key) {
-                let value: serde_json::Value = entry.remove();
-
-                let value = snake_caseify(value);
-
-                obj.insert(snake_case_key, value);
-            }
-        }
-        serde_json::Value::Object(obj)
-    } else {
-        value
-    };
-
-    result
 }

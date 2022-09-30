@@ -48,7 +48,7 @@ pub struct NetworkInfo {
 pub struct NetworkInfoDto {
     /// Protocol parameters.
     #[serde(rename = "protocolParameters")]
-    protocol_parameters: ProtocolResponse,
+    pub protocol_parameters: ProtocolResponse,
     /// Local proof of work.
     #[serde(rename = "localPow")]
     local_pow: bool,
