@@ -70,8 +70,11 @@ impl HttpClient {
             request_builder = request_builder.timeout(_timeout);
         }
         
+        #[cfg(target_family = "wasm")]
         let start_time = instant::Instant::now();
-        
+        #[cfg(not(target_family = "wasm"))]
+        let start_time = std::time::Instant::now();
+
         let resp = request_builder.send().await?;
         log::debug!(
             "GET: {:?} ms for {} {}",
