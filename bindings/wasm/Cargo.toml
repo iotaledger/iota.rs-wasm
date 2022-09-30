@@ -21,7 +21,7 @@ iota-client = { path = "../../", default-features = false, features = ["message_
 console_error_panic_hook = { version = "0.1.7", default-features = false }
 serde_json = { version = "1.0.82", default-features = false }
 js-sys = { version = "0.3.59", default-features = false, features = [] }
-wasm-bindgen = { version = "0.2.82", default-features = false, features = ["spans", "std", "serde-serialize"] }
+wasm-bindgen = { version = "0.2.83", default-features = false, features = ["spans", "std", "serde-serialize"] }
 wasm-bindgen-futures = { version = "0.4.32", default-features = false }
 
 [target.'cfg(all(target_arch = "wasm32", not(target_os = "wasi")))'.dependencies]
