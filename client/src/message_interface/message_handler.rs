@@ -34,7 +34,7 @@ use crate::secret::SecretManager;
 use crate::{
     api::{PreparedTransactionData, PreparedTransactionDataDto},
     message_interface::{message::Message, response::Response},
-    request_funds_from_faucet, Client, NetworkInfoDto, Result,
+    request_funds_from_faucet, Client, Result,
 };
 
 fn panic_to_response_message(panic: Box<dyn Any>) -> Response {
@@ -67,9 +67,9 @@ pub struct ClientMessageHandler {
 
 impl ClientMessageHandler {
     /// Creates a new instance of the message handler with the default client manager.
-    pub async fn new() -> Result<Self> {
+    pub fn new() -> Result<Self> {
         let instance = Self {
-            client: Client::builder().finish().await?,
+            client: Client::builder().finish()?,
         };
         Ok(instance)
     }
@@ -585,19 +585,6 @@ impl ClientMessageHandler {
                 token_scheme_kind,
             ))),
             Message::Faucet { url, address } => Ok(Response::Faucet(request_funds_from_faucet(&url, &address).await?)),
-            Message::GetTokenSupply => Ok(Response::TokenSupply(self.client.get_token_supply()?)),
-            Message::GetProtocolResponseJson => Ok(Response::GetProtocolResponseJson({
-                let info: NetworkInfoDto = self.client.get_network_info()?.into();
-                let protocol_response: ProtocolResponse = info.protocol_parameters;
-
-                let protocol_response_json: String = serde_json::to_string(&protocol_response)?;
-
-                protocol_response_json
-            })),
-            Message::GetInfoUpdate => {
-                self.client.get_info_update().await?;
-                Ok(Response::Ok)
-            }
         }
     }
 }

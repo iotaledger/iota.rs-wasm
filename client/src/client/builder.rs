@@ -53,7 +53,7 @@ pub struct NetworkInfo {
 pub struct NetworkInfoDto {
     /// Protocol parameters.
     #[serde(rename = "protocolParameters")]
-    pub protocol_parameters: ProtocolResponse,
+    protocol_parameters: ProtocolResponse,
     /// Local proof of work.
     #[serde(rename = "localPow")]
     local_pow: bool,
@@ -318,29 +318,9 @@ impl ClientBuilder {
     }
 
     /// Build the Client instance.
-    pub async fn finish(self) -> Result<Client> {
+    pub fn finish(self) -> Result<Client> {
         let network_info = Arc::new(RwLock::new(self.network_info));
         let healthy_nodes = Arc::new(RwLock::new(HashMap::new()));
-
-        #[cfg(target_family = "wasm")]
-        {
-            let nodes = self
-                .node_manager_builder
-                .primary_node
-                .iter()
-                .chain(self.node_manager_builder.nodes.iter())
-                .map(|node| node.clone().into())
-                .collect();
-
-            let healthy_nodes_ = healthy_nodes.clone();
-            let network_info_ = network_info.clone();
-
-            // Fetch network info once so we don't return defaults on a potential immediate call to `get_network_info`.
-            Client::sync_nodes(&healthy_nodes_, &nodes, &network_info_).await?;
-
-            // We cannot spawn a loop, because we have no mechanism to stop it
-            // so the program hangs as long as that loop is active.
-        }
 
         #[cfg(not(target_family = "wasm"))]
         let (runtime, sync_kill_sender) = {

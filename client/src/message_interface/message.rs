@@ -134,8 +134,6 @@ pub enum Message {
     GetLocalPow,
     /// Get fallback to local proof of work timeout
     GetFallbackToLocalPow,
-    /// Gets and updates the internally cached network info.
-    GetInfoUpdate,
     /// Returns the unhealthy nodes.
     #[cfg(not(target_family = "wasm"))]
     UnhealthyNodes,
@@ -514,8 +512,4 @@ pub enum Message {
         /// The address for request funds
         address: String,
     },
-    /// Requests the token supply from the network the client is configured for.
-    GetTokenSupply,
-    /// Requests the protocol parameters in the form of a JSON string,
-    GetProtocolResponseJson,
 }

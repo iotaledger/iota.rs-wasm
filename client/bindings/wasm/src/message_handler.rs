@@ -16,16 +16,12 @@ pub struct WasmMessageHandler {
 /// Creates a message handler with the given client options.
 #[wasm_bindgen(js_name = messageHandlerNew)]
 #[allow(non_snake_case)]
-// TODO: Return typed Promise.
-pub async fn message_handler_new(clientOptions: Option<String>) -> js_sys::Promise {
-    future_to_promise(async move {
-        let client_message_handler: ClientMessageHandler = create_message_handler(clientOptions)
-            .await
-            .map_err(|err| js_sys::Error::new(&format!("Client MessageHandler constructor failed: {}", err)))?;
+pub fn message_handler_new(clientOptions: Option<String>) -> Result<WasmMessageHandler, JsValue> {
+    let client_message_handler: ClientMessageHandler = create_message_handler(clientOptions)
+        .map_err(|err| js_sys::Error::new(&format!("Client MessageHandler constructor failed: {}", err)))?;
 
-        Ok(JsValue::from(WasmMessageHandler {
-            handler: Rc::new(client_message_handler),
-        }))
+    Ok(WasmMessageHandler {
+        handler: Rc::new(client_message_handler),
     })
 }
 

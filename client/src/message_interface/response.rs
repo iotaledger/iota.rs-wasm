@@ -214,12 +214,6 @@ pub enum Response {
     /// - [`Faucet`](crate::message_interface::Message::Faucet)
     Faucet(String),
     /// Response for:
-    /// - [`GetTokenSupply`](crate::message_interface::Message::GetTokenSupply)
-    TokenSupply(u64),
-    //// Response for:
-    /// - [`GetProtocolResponseJson`](crate::message_interface::Message::GetProtocolResponseJson)
-    GetProtocolResponseJson(String),
-    /// Response for:
     /// - [`StoreMnemonic`](crate::message_interface::Message::StoreMnemonic)
     Ok,
     /// Response for any method that returns an error.
