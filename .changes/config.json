@@ -8,7 +8,7 @@
   },
   "packages": {
     "nodejs-binding": {
-      "path": "./bindings/nodejs",
+      "path": "./client/bindings/nodejs",
       "manager": "javascript",
       "getPublishedVersion": "npm view ${ pkgFile.pkg.name } version",
       "prepublish": [
@@ -20,6 +20,12 @@
         },
         {
           "command": "dasel put string -f Cargo.toml '.dependencies.iota-client.features.[1]' mqtt"
+        },
+        {
+          "command": "yarn --ignore-scripts"
+        },
+        {
+          "command": "tsc"
         },
         {
           "command": "cat Cargo.toml"
