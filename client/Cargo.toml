@@ -15,6 +15,7 @@ categories = [ "cryptography::cryptocurrencies" ]
 async-trait = { version = "0.1.58", default-features = false }
 derive_builder = { version = "0.11.2", default-features = false, features = [ "std" ]}
 futures = { version = "0.3.25", default-features = false, features = [ "thread-pool" ] }
+instant = { version = "0.1.12", default-features = false, features = [ "wasm-bindgen" ] }
 iota-crypto = { version = "0.15.2", default-features = false, features = [ "std", "chacha", "blake2b", "ed25519", "random", "slip10", "bip39", "bip39-en", "ternary_encoding" ] }
 iota-pow = { version = "1.0.0-rc.1", path = "../pow", default-features = false }
 iota-types = { version = "1.0.0-rc.1", path = "../types", default-features = false, features = [ "api", "block", "serde", "dto", "std" ] }
@@ -24,7 +25,7 @@ packable = { version = "0.7.0", default-features = false, features = [ "serde", 
 prefix-hex = { version = "0.5.0", default-features = false, features = [ "std" ] }
 primitive-types = { version = "0.12.0", default-features = false }
 regex = { version = "1.6.0", default-features = false, features = [ "std", "unicode-perl" ], optional = true }
-reqwest = { version = "0.11.12", default-features = false, features = [ "json", "blocking" ] }
+reqwest = { version = "0.11.12", default-features = false, features = [ "json" ] }
 serde = { version = "1.0.147", default-features = false, features = [ "derive" ] }
 serde_json = { version = "1.0.87", default-features = false }
 thiserror = { version = "1.0.37", default-features = false }
@@ -48,7 +49,6 @@ backtrace = { version = "0.3.66", default-features = false, features = [ "std" ]
 tokio = { version = "1.21.2", default-features = false, features = [ "macros", "rt-multi-thread", "time", "sync" ] }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
-instant = { version = "0.1.12", default-features = false }
 gloo-timers = { version = "0.2.4", default-features = false, features = [ "futures" ] }
 
 [dev-dependencies]
