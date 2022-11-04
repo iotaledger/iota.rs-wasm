@@ -38,19 +38,6 @@ impl<'a> ClientBlockBuilder<'a> {
                 .await?,
         );
 
-        #[cfg(not(target_family = "wasm"))]
-        let seconds = {
-                    std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .expect("time went backwards")
-                        .as_secs() as u32
-        };
-        #[cfg(target_family = "wasm")]
-        let seconds = {
-            instant::SystemTime::now().duration_since(instant::SystemTime::UNIX_EPOCH)
-                        .expect("time went backwards")
-                        .as_secs() as u32
-        };
         // Second request to get all basic outputs that can be unlocked by the address through the expiration condition.
         output_ids.extend(
             self.client
@@ -60,7 +47,10 @@ impl<'a> ClientBlockBuilder<'a> {
                     QueryParameter::HasStorageDepositReturn(false),
                     // Ignore outputs that aren't expired yet
                     QueryParameter::ExpiresBefore(
-                       seconds,
+                        instant::SystemTime::now()
+                            .duration_since(instant::SystemTime::UNIX_EPOCH)
+                            .expect("time went backwards")
+                            .as_secs() as u32,
                     ),
                 ])
                 .await?,
