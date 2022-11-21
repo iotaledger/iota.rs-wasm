@@ -1,7 +1,9 @@
 // Copyright 2021-2022 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{rc::Rc, sync::mpsc::channel};
+use std::rc::Rc;
+
+use tokio::sync::mpsc::unbounded_channel;
 
 use iota_client::message_interface::{create_message_handler, ClientMessageHandler, Message, Response};
 use wasm_bindgen::{prelude::*, JsCast};
@@ -57,13 +59,12 @@ async fn send_message_inner(handler: &ClientMessageHandler, serialized_message: 
         Err(err) => return Ok(Response::Error(iota_client::Error::Json(err))),
     };
 
-    let (response_tx, response_rx) = channel();
+    let (response_tx, mut response_rx) = unbounded_channel();
     handler.handle(message, response_tx).await;
 
-    response_rx.recv().map_err(|err| {
+    response_rx.recv().await.ok_or_else(|| {
         JsValue::from(js_sys::Error::new(&format!(
-            "Client MessageHandler receive failed: {}",
-            err
+            "Client MessageHandler receive failed:"
         )))
     })
 }
