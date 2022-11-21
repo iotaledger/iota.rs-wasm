@@ -36,10 +36,7 @@ async fn main() -> Result<()> {
     let faucet_url = env::var("FAUCET_URL").unwrap();
 
     // Create a client instance.
-    let client = Client::builder()
-        .with_node(&node_url)?
-        .with_node_sync_disabled()
-        .finish()?;
+    let client = Client::builder().with_node(&node_url)?.finish()?;
 
     let secret_manager = SecretManager::Mnemonic(MnemonicSecretManager::try_from_mnemonic(
         &env::var("NON_SECURE_USE_OF_DEVELOPMENT_MNEMONIC_1").unwrap(),
@@ -91,9 +88,9 @@ async fn main() -> Result<()> {
     // make both alias outputs controlled by the first one
     //////////////////////////////////
     let alias_output_ids = get_new_alias_output_ids(block_1.payload().unwrap())?;
-    let alias_id_0 = AliasId::from(alias_output_ids[0]);
-    let alias_id_1 = AliasId::from(alias_output_ids[1]);
-    let alias_id_2 = AliasId::from(alias_output_ids[2]);
+    let alias_id_0 = AliasId::from(&alias_output_ids[0]);
+    let alias_id_1 = AliasId::from(&alias_output_ids[1]);
+    let alias_id_2 = AliasId::from(&alias_output_ids[2]);
 
     let alias_0_address = Address::Alias(AliasAddress::new(alias_id_0));
     let alias_1_address = Address::Alias(AliasAddress::new(alias_id_1));

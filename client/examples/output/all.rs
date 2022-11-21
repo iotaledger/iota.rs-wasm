@@ -38,10 +38,7 @@ async fn main() -> Result<()> {
     let faucet_url = std::env::var("FAUCET_URL").unwrap();
 
     // Create a client instance.
-    let client = Client::builder()
-        .with_node(&node_url)?
-        .with_node_sync_disabled()
-        .finish()?;
+    let client = Client::builder().with_node(&node_url)?.finish()?;
 
     let secret_manager = SecretManager::Mnemonic(MnemonicSecretManager::try_from_mnemonic(
         &std::env::var("NON_SECURE_USE_OF_DEVELOPMENT_MNEMONIC_1").unwrap(),
@@ -102,14 +99,14 @@ async fn main() -> Result<()> {
     // create foundry, native tokens and nft output
     ///////////////////////////////////////////////
     let alias_output_id = get_alias_output_id(block.payload().unwrap())?;
-    let alias_id = AliasId::from(alias_output_id);
+    let alias_id = AliasId::from(&alias_output_id);
 
     let nft_output_id = get_nft_output_id(block.payload().unwrap())?;
-    let nft_id = NftId::from(nft_output_id);
+    let nft_id = NftId::from(&nft_output_id);
 
     let token_scheme = TokenScheme::Simple(SimpleTokenScheme::new(U256::from(50), U256::from(0), U256::from(100))?);
     let foundry_id = FoundryId::build(
-        &AliasAddress::from(AliasId::from(alias_output_id)),
+        &AliasAddress::from(AliasId::from(&alias_output_id)),
         1,
         token_scheme.kind(),
     );

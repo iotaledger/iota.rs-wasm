@@ -8,9 +8,9 @@ use std::{
     time::Duration,
 };
 
-use iota_types::{
-    api::response::{ProtocolResponse, RentStructureResponse},
-    block::protocol::ProtocolParameters,
+use iota_types::block::{
+    output::dto::RentStructureDto,
+    protocol::{dto::ProtocolParametersDto, ProtocolParameters},
 };
 #[cfg(not(target_family = "wasm"))]
 use tokio::{runtime::Runtime, sync::broadcast::channel};
@@ -53,7 +53,7 @@ pub struct NetworkInfo {
 pub struct NetworkInfoDto {
     /// Protocol parameters.
     #[serde(rename = "protocolParameters")]
-    protocol_parameters: ProtocolResponse,
+    protocol_parameters: ProtocolParametersDto,
     /// Local proof of work.
     #[serde(rename = "localPow")]
     local_pow: bool,
@@ -68,16 +68,16 @@ pub struct NetworkInfoDto {
 impl From<NetworkInfo> for NetworkInfoDto {
     fn from(info: NetworkInfo) -> Self {
         NetworkInfoDto {
-            protocol_parameters: ProtocolResponse {
-                version: info.protocol_parameters.protocol_version(),
+            protocol_parameters: ProtocolParametersDto {
+                protocol_version: info.protocol_parameters.protocol_version(),
                 network_name: info.protocol_parameters.network_name().to_string(),
                 bech32_hrp: info.protocol_parameters.bech32_hrp().to_string(),
                 min_pow_score: info.protocol_parameters.min_pow_score(),
                 below_max_depth: info.protocol_parameters.below_max_depth(),
-                rent_structure: RentStructureResponse {
-                    v_byte_cost: info.protocol_parameters.rent_structure().v_byte_cost,
-                    v_byte_factor_key: info.protocol_parameters.rent_structure().v_byte_factor_key,
-                    v_byte_factor_data: info.protocol_parameters.rent_structure().v_byte_factor_data,
+                rent_structure: RentStructureDto {
+                    v_byte_cost: info.protocol_parameters.rent_structure().byte_cost(),
+                    v_byte_factor_key: info.protocol_parameters.rent_structure().byte_factor_key(),
+                    v_byte_factor_data: info.protocol_parameters.rent_structure().byte_factor_data(),
                 },
                 token_supply: info.protocol_parameters.token_supply().to_string(),
             },
@@ -109,7 +109,6 @@ fn default_tips_interval() -> u64 {
 
 /// Builder to construct client instance with sensible default values
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(deny_unknown_fields)]
 #[must_use]
 pub struct ClientBuilder {
     /// Node manager builder
@@ -248,10 +247,10 @@ impl ClientBuilder {
         self
     }
 
-    /// Disables the node syncing process.
+    /// Ignores the node health status.
     /// Every node will be considered healthy and ready to use.
-    pub fn with_node_sync_disabled(mut self) -> Self {
-        self.node_manager_builder = self.node_manager_builder.with_node_sync_disabled();
+    pub fn with_ignore_node_health(mut self) -> Self {
+        self.node_manager_builder = self.node_manager_builder.with_ignore_node_health();
         self
     }
 
@@ -314,6 +313,13 @@ impl ClientBuilder {
     /// Sets the request timeout for API usage.
     pub fn with_remote_pow_timeout(mut self, timeout: Duration) -> Self {
         self.remote_pow_timeout = timeout;
+        self
+    }
+
+    /// Set User-Agent header for requests
+    /// Default is "iota-client/[version]"
+    pub fn with_user_agent(mut self, user_agent: String) -> Self {
+        self.node_manager_builder = self.node_manager_builder.with_user_agent(user_agent);
         self
     }
 

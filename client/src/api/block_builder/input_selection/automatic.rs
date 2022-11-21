@@ -76,7 +76,7 @@ impl<'a> ClientBlockBuilder<'a> {
         let mut available_inputs = self.get_utxo_chains_inputs(self.outputs.iter()).await?;
         let required_inputs_for_sender_or_issuer = self.get_inputs_for_sender_and_issuer(&available_inputs).await?;
 
-        let current_time = self.client.get_time_checked()?;
+        let current_time = self.client.get_time_checked().await?;
 
         // Try to select inputs with required inputs for utxo chains alone before requesting more inputs from addresses.
         if let Ok(selected_transaction_data) = try_select_inputs(
@@ -144,7 +144,7 @@ impl<'a> ClientBlockBuilder<'a> {
                         let (required_unlock_address, _unlocked_alias_or_nft_address) = output
                             .required_and_unlocked_address(
                                 current_time,
-                                output_response.metadata.output_id()?,
+                                &output_response.metadata.output_id()?,
                                 false,
                             )?;
                         if required_unlock_address == address {

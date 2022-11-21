@@ -1,29 +1,24 @@
 // Copyright 2022 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
-#[cfg(target_family = "wasm")]
-use std::sync::mpsc::Sender;
 use std::{any::Any, panic::AssertUnwindSafe};
 
 use backtrace::Backtrace;
 use futures::{Future, FutureExt};
-use iota_types::{
-    api::response::{ProtocolResponse, RentStructureResponse},
-    block::{
-        address::dto::AddressDto,
-        input::dto::UtxoInputDto,
-        output::{
-            dto::{OutputBuilderAmountDto, OutputDto},
-            AliasId, AliasOutput, BasicOutput, FoundryId, FoundryOutput, NftId, NftOutput, Output,
-        },
-        payload::{
-            dto::{MilestonePayloadDto, PayloadDto},
-            Payload, TransactionPayload,
-        },
-        Block, BlockDto,
+use iota_types::block::{
+    address::dto::AddressDto,
+    input::dto::UtxoInputDto,
+    output::{
+        dto::{OutputBuilderAmountDto, OutputDto, RentStructureDto},
+        AliasId, AliasOutput, BasicOutput, FoundryId, FoundryOutput, NftId, NftOutput, Output,
     },
+    payload::{
+        dto::{MilestonePayloadDto, PayloadDto},
+        Payload, TransactionPayload,
+    },
+    protocol::dto::ProtocolParametersDto,
+    Block, BlockDto,
 };
-#[cfg(not(target_family = "wasm"))]
 use tokio::sync::mpsc::UnboundedSender;
 use zeroize::Zeroize;
 
@@ -80,12 +75,7 @@ impl ClientMessageHandler {
     }
 
     /// Handle messages
-    pub async fn handle(
-        &self,
-        message: Message,
-        #[cfg(target_family = "wasm")] response_tx: Sender<Response>,
-        #[cfg(not(target_family = "wasm"))] response_tx: UnboundedSender<Response>,
-    ) {
+    pub async fn handle(&self, message: Message, response_tx: UnboundedSender<Response>) {
         match &message {
             // Don't log secrets
             Message::GenerateAddresses {
@@ -304,16 +294,16 @@ impl ClientMessageHandler {
             Message::GetTipsInterval => Ok(Response::TipsInterval(self.client.get_tips_interval())),
             Message::GetProtocolParameters => {
                 let params = self.client.get_protocol_parameters().await?;
-                let protocol_response = ProtocolResponse {
-                    version: params.protocol_version(),
+                let protocol_response = ProtocolParametersDto {
+                    protocol_version: params.protocol_version(),
                     network_name: params.network_name().to_string(),
                     bech32_hrp: params.bech32_hrp().to_string(),
                     min_pow_score: params.min_pow_score(),
                     below_max_depth: params.below_max_depth(),
-                    rent_structure: RentStructureResponse {
-                        v_byte_cost: params.rent_structure().v_byte_cost,
-                        v_byte_factor_key: params.rent_structure().v_byte_factor_key,
-                        v_byte_factor_data: params.rent_structure().v_byte_factor_data,
+                    rent_structure: RentStructureDto {
+                        v_byte_cost: params.rent_structure().byte_cost(),
+                        v_byte_factor_key: params.rent_structure().byte_factor_key(),
+                        v_byte_factor_data: params.rent_structure().byte_factor_data(),
                     },
                     token_supply: params.token_supply().to_string(),
                 };
@@ -573,8 +563,8 @@ impl ClientMessageHandler {
                 let payload = TransactionPayload::try_from_dto_unverified(&payload)?;
                 Ok(Response::TransactionId(payload.id()))
             }
-            Message::ComputeAliasId { output_id } => Ok(Response::AliasId(AliasId::from(output_id))),
-            Message::ComputeNftId { output_id } => Ok(Response::NftId(NftId::from(output_id))),
+            Message::ComputeAliasId { output_id } => Ok(Response::AliasId(AliasId::from(&output_id))),
+            Message::ComputeNftId { output_id } => Ok(Response::NftId(NftId::from(&output_id))),
             Message::ComputeFoundryId {
                 alias_address,
                 serial_number,
