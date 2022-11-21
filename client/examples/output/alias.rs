@@ -32,10 +32,7 @@ async fn main() -> Result<()> {
     let faucet_url = std::env::var("FAUCET_URL").unwrap();
 
     // Create a client instance.
-    let client = Client::builder()
-        .with_node(&node_url)?
-        .with_node_sync_disabled()
-        .finish()?;
+    let client = Client::builder().with_node(&node_url)?.finish()?;
 
     let secret_manager = SecretManager::Mnemonic(MnemonicSecretManager::try_from_mnemonic(
         &std::env::var("NON_SECURE_USE_OF_DEVELOPMENT_MNEMONIC_1").unwrap(),
@@ -80,7 +77,7 @@ async fn main() -> Result<()> {
     // create second transaction with the actual AliasId (BLAKE2b-160 hash of the Output ID that created the alias)
     //////////////////////////////////
     let alias_output_id = get_alias_output_id(block.payload().unwrap())?;
-    let alias_id = AliasId::from(alias_output_id);
+    let alias_id = AliasId::from(&alias_output_id);
     let outputs = vec![
         alias_output_builder
             .with_alias_id(alias_id)

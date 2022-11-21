@@ -19,15 +19,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security -->
 
-## 1.0.0-rc.2 - 20XX-XX-XX
+## 1.0.0-rc.3 - 20XX-XX-XX
+
+### Added
+
+- `NftAddress::into_nft_id` method;
+- `AliasAddress::into_alias_id` method;
+- `Output::{is_treasury, is_basic, is_alias, is_foundry, is_nft}` methods;
+- `RentStructure::new` and getters;
+- serde aliases to `ProtocolParameters` fields for backwards compatibility;
+
+### Changed
+
+- Replaced `RentStructureResponse` with `RentStructureDto`;
+- Replaced `ProtocolResponse` with `ProtocolParametersDto`;
+- `RentStructure` fields have been made private;
+- Renamed `RentStructure::key_factor` to `RentStructure::byte_factor_key`;
+- Renamed `RentStructure::data_factor` to `RentStructure::byte_factor_data`;
+
+## 1.0.0-rc.2 - 2022-11-09
 
 ### Added
 
 - `OutputResponse` enum with `Json` and `Raw` variants;
+- `AliasOutput::alias_id_non_null` and `NftOutput::nft_id_non_null` methods;
 
 ### Changed
 
 - Renamed `OutputResponse` to `OutputWithMetadataResponse`;
+- `OutputId::hash` now takes a `&self`;
+- `impl From<OutputId> for {AliasId, NftId}` now takes an `&OutputId`;
+- `{AliasId, NftId, ChainId}::or_from_output_id` now takes an `&OutputId`;
+- `AliasOutput::alias_address` now takes an `&OutputId`;
+- `NftOutput::nft_address` now takes an `&OutputId`;
+
+### Fixed
+
+- Packing order of `v_byte_factor_data` and `v_byte_factor_key`;
 
 ## 1.0.0-rc.1 - 2022-10-25
 
