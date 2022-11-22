@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security -->
 
-## 1.0.0-rc.3 - 20XX-XX-XX
+## 1.0.0-rc.3 - 2022-11-22
 
 ### Added
 
@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `AliasAddress::into_alias_id` method;
 - `Output::{is_treasury, is_basic, is_alias, is_foundry, is_nft}` methods;
 - `RentStructure::new` and getters;
-- serde aliases to `ProtocolParameters` fields for backwards compatibility;
+- serde aliases to `ProtocolParameters` and `RentStructure` fields for backwards compatibility;
 
 ### Changed
 
