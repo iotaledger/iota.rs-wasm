@@ -36,7 +36,7 @@
 - [IClientOptions](interfaces/IClientOptions.md)
 - [IDuration](interfaces/IDuration.md)
 - [IGenerateAddressesOptions](interfaces/IGenerateAddressesOptions.md)
-- [IGenerateAddressMetadata](interfaces/IGenerateAddressMetadata.md)
+- [IGenerateAddressOptions](interfaces/IGenerateAddressOptions.md)
 - [LedgerNanoStatus](interfaces/LedgerNanoStatus.md)
 - [LedgerApp](interfaces/LedgerApp.md)
 - [IAuth](interfaces/IAuth.md)
