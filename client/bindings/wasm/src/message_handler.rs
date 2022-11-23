@@ -64,7 +64,7 @@ async fn send_message_inner(handler: &ClientMessageHandler, serialized_message: 
     response_rx
         .recv()
         .await
-        .ok_or_else(|| JsValue::from(js_sys::Error::new(&format!("Client MessageHandler receive failed:"))))
+        .ok_or_else(|| JsValue::from(js_sys::Error::new("Client MessageHandler receive failed:")))
 }
 
 /// MQTT is not supported for WebAssembly bindings.
