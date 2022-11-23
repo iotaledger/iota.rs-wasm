@@ -3,9 +3,8 @@
 
 use std::rc::Rc;
 
-use tokio::sync::mpsc::unbounded_channel;
-
 use iota_client::message_interface::{create_message_handler, ClientMessageHandler, Message, Response};
+use tokio::sync::mpsc::unbounded_channel;
 use wasm_bindgen::{prelude::*, JsCast};
 use wasm_bindgen_futures::future_to_promise;
 
@@ -62,11 +61,10 @@ async fn send_message_inner(handler: &ClientMessageHandler, serialized_message: 
     let (response_tx, mut response_rx) = unbounded_channel();
     handler.handle(message, response_tx).await;
 
-    response_rx.recv().await.ok_or_else(|| {
-        JsValue::from(js_sys::Error::new(&format!(
-            "Client MessageHandler receive failed:"
-        )))
-    })
+    response_rx
+        .recv()
+        .await
+        .ok_or_else(|| JsValue::from(js_sys::Error::new(&format!("Client MessageHandler receive failed:"))))
 }
 
 /// MQTT is not supported for WebAssembly bindings.
