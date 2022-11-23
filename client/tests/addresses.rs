@@ -219,7 +219,7 @@ async fn address_generation() {
 
     #[cfg(feature = "message_interface")]
     {
-        let message_handler = message_interface::create_message_handler(None).await.unwrap();
+        let message_handler = message_interface::create_message_handler(None).unwrap();
         for address in &addresses_data {
             let options = GetAddressesBuilderOptions {
                 coin_type: Some(address.coin_type),
@@ -256,7 +256,7 @@ async fn address_generation() {
 
     #[cfg(all(feature = "message_interface", feature = "stronghold"))]
     {
-        let message_handler = message_interface::create_message_handler(None).await.unwrap();
+        let message_handler = message_interface::create_message_handler(None).unwrap();
         for address in addresses_data {
             let stronghold_filename = format!("{}.stronghold", address.bech32_address);
             let secret_manager_dto = StrongholdDto {

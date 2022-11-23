@@ -20,7 +20,7 @@ async fn generate_addresses() {
             "fallbackToLocalPow": true
     }"#
     .to_string();
-    let message_handler = message_interface::create_message_handler(Some(client_config)).await.unwrap();
+    let message_handler = message_interface::create_message_handler(Some(client_config)).unwrap();
 
     let secret_manager = format!(
         "{{\"mnemonic\":\"{}\"}}",
@@ -66,7 +66,7 @@ async fn build_and_post_block() {
             "fallbackToLocalPow": true
         }"#
     .to_string();
-    let message_handler = message_interface::create_message_handler(Some(client_config)).await.unwrap();
+    let message_handler = message_interface::create_message_handler(Some(client_config)).unwrap();
 
     // Generate addresses
     let secret_manager = format!(
@@ -174,7 +174,7 @@ async fn build_and_post_block() {
 #[cfg(feature = "stronghold")]
 #[tokio::test]
 async fn stronghold() {
-    let message_handler = message_interface::create_message_handler(None).await.unwrap();
+    let message_handler = message_interface::create_message_handler(None).unwrap();
 
     let secret_manager_dto = r#"{"stronghold": {"password": "some_hopefully_secure_password", "snapshotPath": "teststronghold.stronghold"}}"#;
     let mnemonic = String::from(
