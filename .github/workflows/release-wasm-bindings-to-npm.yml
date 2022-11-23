@@ -40,15 +40,15 @@ jobs:
 
       - name: Install Yarn
         run: npm i -g yarn
-        working-directory: bindings/wasm
+        working-directory: client/bindings/wasm
 
       - name: Install JS dependencies
         run: yarn
-        working-directory: bindings/wasm
+        working-directory: client/bindings/wasm
 
       - name: Build project
         run: yarn build
-        working-directory: bindings/wasm
+        working-directory: client/bindings/wasm
 
       - name: Publish WASM bindings to NPM
         shell: sh
@@ -56,4 +56,4 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         # will publish 'latest' tag if no tag is passed
         run: npm publish $(if [ ${{ inputs.tag }} != '' ]; then echo --tag ${{ inputs.tag }}; fi) --access public
-        working-directory: bindings/wasm
+        working-directory: client/bindings/wasm
